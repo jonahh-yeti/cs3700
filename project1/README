@@ -1,0 +1,9 @@
+The main code for this project is written in python, since the socket implementation in python is easy to use.  
+
+The code is used by calling ./client <-p port> <-s> [hostname] [nuid].  This calls a bash script to parse the args and pass the data to our python code.  
+
+The python script main.py accepts 4 command line arguments.  A number for the port, true/false for ssl, a string for the hostname and an NUID.  Using these arguments, it creates a socket object, determines whether it needs an SSL wrapper, and connects to the given host to send a HELLO message from the NUID given.
+
+Once the message is sent, the code checks for a 256-byte response and loops until the response shows a BYE message.  
+
+The only challenge faced was a brief hiccup in deciding where to parse the command line arguments.  It was decided that they would be parsed properly in the bash script used to run the code, and passed in a simplified way to the python code.  
