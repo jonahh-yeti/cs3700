@@ -26,10 +26,16 @@ msg = s.recv(256)
 
 # Autosolve messages until a BYE is found
 while (msg.find("BYE") == -1):
-  if msg.startswith("cs3700fall2017"):
-    msg
-    ans = eval(msg[22:])
+  if msg.startswith("cs3700fall2017 STATUS"):
+    try:
+      ans = eval(msg[22:])
+    except SyntaxError as error:
+      print "Could not evaluate " + msg[22:] + ", caught error: " + repr(error) + ".  Exiting."
+      sys.exit()
     s.sendall("cs3700fall2017 " + str(ans) + "\n")
     msg = s.recv(256)
+  else:
+    print "Response was not a STATUS message or a BYE message.  Exiting."
+    sys.exit()
 # print the secret
 print msg[15:msg.find("BYE")-1]
