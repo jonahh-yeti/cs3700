@@ -1,3 +1,39 @@
 #!/bin/bash
 
-python main.py
+usage () { echo "$0 <-p port> <-s> [hostname] [NEU ID]" && exit 1; }
+
+# Default variable assignments
+default_port=27998
+port="$default_port"
+use_ssl='false'
+
+# Verify that at least the required arguments were provided
+if [ $# -lt 2 ]; then
+	echo "Missing required arguments!" && usage
+fi
+
+# Handle assigning the port and ssl optional arguments
+options=':s:p:'
+while getopts $options option
+do
+    case $option in
+        p  ) port=$OPTARG;;
+        s  ) use_ssl='true';;
+        \? ) echo "Unknown option: -$OPTARG" >&2; usage;;
+        :  ) echo "Missing option argument for -$OPTARG" >&2; usage;;
+        *  ) echo "Unimplemented option: -$OPTARG" >&2; usage;;
+    esac
+done
+
+# Handle incrementing the port if ssl is specified but no port is specified
+if [ $port -eq $default_port ] && [ "$use_ssl" = "true" ]; then
+	let "port+=1"
+fi
+
+# Second to last argument is hostname
+hostname="${@: -2:1}"
+# Last argument is neu_id
+neu_id="${@: -1}"
+
+# Call the script with all arguments
+python main.py $port "$use_ssl" "$hostname" "$neu_id"
