@@ -2,14 +2,14 @@ import socket
 import ssl
 import sys
 
-port = sys.argv[1]
-ssl = sys.argv[2]
+port = int(sys.argv[1])
+use_ssl = sys.argv[2]
 host = sys.argv[3]
 nuid = sys.argv[4]
 
 s = socket.socket()
 
-if ssl:
+if use_ssl == "true":
   s = ssl.wrap_socket(s, keyfile='domain.key', certfile='domain.crt')
 
 s.connect((host, port))
