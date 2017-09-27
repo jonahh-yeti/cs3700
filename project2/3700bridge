@@ -3,7 +3,13 @@
 import sys
 import socket
 import select
- 
+import json
+import time
+
+id = None
+root = None
+cost = 0
+
 # pads the name with null bytes at the end
 def pad(name):
         result = '\0' + name
@@ -11,19 +17,42 @@ def pad(name):
                 result += '\0'
         return result
 
-def bpdu(me, root, cost):
-	message = {'id': me, 'root': root, 'cost':cost}
-	return json.dumps(message)
-
-def packet(source, dest, form, message):
-	packet = {'source': source, 'dest': dest, 'type':form, 'message':message}
+def packet(dest, form, message):
+	packet = {'source': id, 'dest': dest, 'type':form, 'message':message}
 	return json.dumps(packet)
+
+def send_bpdu(sockets):
+		message = {'id': id, 'root': root, 'cost': cost}
+		for x in sockets:
+			p = packet(x.getpeername(), 'bpdu', json.dumps(message))
+			x.sendall(p)
+			print p
+
+def read_packet(data):
+	data = json.loads(data)
+	print data
+	if data['type'] == 'bpdu':
+		return read_bpdu(data)
+	
+def read_bpdu(data):
+	d_root = data['message']['root']
+	d_cost = data['message']['cost']
+	if d_cost < cost:
+		root = d_root
+		cost = d_cost + 1
+	elif d_cost == cost and int(d_root, 16) < int(root, 16):
+		root = d_root
+		cost = d_cost + 1
+	if d_root == root:
+		print "New root: " + id + "/" + root
+			
  
 if __name__ == "__main__":
         id = sys.argv[1]
         LAN = sys.argv[2:]
         sockets = []
-        
+	root = id
+
         # creates sockets and connects to them
         for x in range(len(LAN)):
                 s = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
@@ -34,13 +63,16 @@ if __name__ == "__main__":
         print "Bridge " + id + " starting up\n"
  
         # Main loop
+	t = time.time()
         while True:
-		
                 # Calls select with all the sockets; change the timeout value (1)
                 ready, ignore, ignore2 = select.select(sockets, [], [], 1)
- 
-                # Reads from each fo the ready sockets
+		 
+		# Reads from each of the ready sockets
                 for x in ready:
                         data = x.recv(1500)
-                        print(data)
+			read_packet(data)
 
+		if (time.time() - t) > 0.5:
+			send_bpdu(ready)
+			t = time.time()
