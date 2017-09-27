@@ -6,10 +6,6 @@ import select
 import json
 import time
 
-id = None
-root = None
-cost = 0
-
 # pads the name with null bytes at the end
 def pad(name):
         result = '\0' + name
@@ -19,32 +15,33 @@ def pad(name):
 
 def packet(dest, form, message):
 	packet = {'source': id, 'dest': dest, 'type':form, 'message':message}
-	return json.dumps(packet)
+	return str(json.dumps(packet))
 
 def send_bpdu(sockets):
 		message = {'id': id, 'root': root, 'cost': cost}
 		for x in sockets:
-			p = packet(x.getpeername(), 'bpdu', json.dumps(message))
-			x.sendall(p)
-			print p
+			if x != root_port:
+				p = packet(x.getpeername(), 'bpdu', str(json.dumps(message)))
+				x.sendall(p)
+				#print p
 
-def read_packet(data):
-	data = json.loads(data)
+def read_packet(data, port):
 	print data
+	data = json.loads(data)
 	if data['type'] == 'bpdu':
-		return read_bpdu(data)
+		print data
+		return read_bpdu(json.loads(data['message']), port)
 	
-def read_bpdu(data):
-	d_root = data['message']['root']
-	d_cost = data['message']['cost']
-	if d_cost < cost:
+def read_bpdu(data, port):
+	global cost, root, root_port
+	d_root = data['root']
+	d_cost = data['cost']
+	if (d_cost == cost and int(d_root, 16) < int(root, 16)) or (d_cost < cost):
 		root = d_root
 		cost = d_cost + 1
-	elif d_cost == cost and int(d_root, 16) < int(root, 16):
-		root = d_root
-		cost = d_cost + 1
-	if d_root == root:
+		root_port = port
 		print "New root: " + id + "/" + root
+		send_bpdu(sockets)
 			
  
 if __name__ == "__main__":
@@ -52,6 +49,8 @@ if __name__ == "__main__":
         LAN = sys.argv[2:]
         sockets = []
 	root = id
+	cost = 0
+	root_port = None
 
         # creates sockets and connects to them
         for x in range(len(LAN)):
@@ -71,7 +70,7 @@ if __name__ == "__main__":
 		# Reads from each of the ready sockets
                 for x in ready:
                         data = x.recv(1500)
-			read_packet(data)
+			read_packet(data, x)
 
 		if (time.time() - t) > 0.5:
 			send_bpdu(ready)
