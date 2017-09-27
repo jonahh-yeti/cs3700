@@ -10,6 +10,14 @@ def pad(name):
         while len(result) < 108:
                 result += '\0'
         return result
+
+def bpdu(me, root, cost):
+	message = {'id': me, 'root': root, 'cost':cost}
+	return json.dumps(message)
+
+def packet(source, dest, form, message):
+	packet = {'source': source, 'dest': dest, 'type':form, 'message':message}
+	return json.dumps(packet)
  
 if __name__ == "__main__":
         id = sys.argv[1]
@@ -27,6 +35,7 @@ if __name__ == "__main__":
  
         # Main loop
         while True:
+		
                 # Calls select with all the sockets; change the timeout value (1)
                 ready, ignore, ignore2 = select.select(sockets, [], [], 1)
  
