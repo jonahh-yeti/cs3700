@@ -22,25 +22,22 @@ def send_bpdu(sockets):
 	for x in sockets:
 		p = packet(x.getpeername(), 'bpdu', str(json.dumps(message)))
 		x.sendall(p)
-		#print p
 
 def send_message(sockets, message):
 	for x in sockets:
 		x.sendall(message)
 
 def read_packet(data, port):
-	print data
 	data = json.loads(data)
 	if data['type'] == 'bpdu':
-		print "BPDU: " + str(data)
 		return read_bpdu(json.loads(data['message']), port)
 	elif data['type'] == 'data':
-		print "DATA: " + str(data)
 		return process_data(data, port)
 		
 def process_data(data, port):
 	global forwarding_table
 	if port in designated_ports:
+		print "Received message " + json.loads(data['message'])['id'] + " on port " + port.getsocketname() + " from " + data['source'] + " to " + data['dest']
 		if data['source'] not in forwarding_table:
 			forwarding_table[data['source']] = port
 		if data['dest'] in forwarding_table:
@@ -49,17 +46,22 @@ def process_data(data, port):
 			send_message(designated_ports + root_port, str(json.dumps(data)))
 
 def read_bpdu(data, port):
-	global cost, root, root_port, designated_ports
+	global cost, root, root_port, designated_ports, forwarding_table
 	d_root = data['root']
 	d_cost = data['cost']
 	if root_port != None and root == d_root:
 		if cost < d_cost or (cost == d_cost and int(root, 16) < int(d_root, 16)):
 			designated_ports.append(port)
-	if (d_cost == cost and int(d_root, 16) < int(root, 16)) or (d_cost < cost):
+			forwarding_table = []
+			print "Designated port: " + id + "/" + port.getsocketname()
+	if int(d_root, 16) < int(root, 16):
 		root = d_root
+		print "New root: " + id + "/" + root
+	if (d_cost == cost and int(d_root, 16) < int(root, 16)) or (d_cost < cost):
 		cost = d_cost + 1
 		root_port = port
-		print "New root: " + id + "/" + root
+		print "Root port: " + id + "/" + x.getsocketname()
+		forwarding_table = []
 		send_bpdu(sockets)
 			
  
