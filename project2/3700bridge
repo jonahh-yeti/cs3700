@@ -46,7 +46,7 @@ def process_data(data, port):
 	global forwarding_table
 
 	if port in designated_ports:
-		print "Received message " + json.loads(data['message'])['id'] + " on port " + port.getsocketname() + " from " + data['source'] + " to " + data['dest']
+		print "Received message " + json.loads(data['message'])['id'] + " on port " + port.getsockname() + " from " + data['source'] + " to " + data['dest']
 		if data['source'] not in forwarding_table:
 			# Create a forwarding table entry for the source of the packet if one does not already exist
 			forwarding_table[data['source']] = port
@@ -108,9 +108,9 @@ if __name__ == "__main__":
 
 	# Creates sockets and connects to them
 	for x in range(len(LAN)):
-			s = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
-			s.connect(pad(LAN[x]))
-			sockets.append(s)
+		s = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
+		s.connect(pad(LAN[x]))
+		sockets.append(s)
 	print "Bridge " + id + " starting up\n"
 
 	# Current time, serves to start a timer
