@@ -13,23 +13,30 @@ def pad(name):
 		result += '\0'
 	return result
 
+
 # Create a JSON string representation of a packet
 def packet(dest, form, message):
 	packet = {'source': id, 'dest': dest, 'type':form, 'message':message}
 	return str(json.dumps(packet))
 
+
 # Send a BPDU packet
-def send_bpdu(sockets):
+def send_bpdu():
 	message = {'id': id, 'root': root, 'cost': cost}
-	for x in sockets:
+
+	# Calls select with all the sockets; change the timeout value (1)
+	read, write, ignore2 = select.select(sockets, sockets, [], 1)
+	for x in write:
 		# Create and send the BPDU JSON packet
 		p = packet(x.getpeername(), 'bpdu', str(json.dumps(message)))
 		x.sendall(p)
 
+
 # Send a message to all sockets
-def send_message(sockets, message):
-	for x in sockets:
+def send_message(ports_to_send, message):
+	for x in ports_to_send:
 		x.sendall(message)
+
 
 # Determine the type of a packet and read the data
 def read_packet(data, port):
@@ -41,12 +48,14 @@ def read_packet(data, port):
 		# The packet is of some other type
 		return process_data(data, port)
 
+
 # Process a non-BPDU packet
 def process_data(data, port):
 	global forwarding_table
 
 	if port in designated_ports:
-		print "Received message " + json.loads(data['message'])['id'] + " on port " + port.getsockname() + " from " + data['source'] + " to " + data['dest']
+		print "Received message " + str(data['message']['id']) + " on port " + str(sockets.index(port)) + " from " + data['source'] + " to " + data['dest']
+		print("FORWARDING TABLE: " + str(forwarding_table))
 		if data['source'] not in forwarding_table:
 			# Create a forwarding table entry for the source of the packet if one does not already exist
 			forwarding_table[data['source']] = port
@@ -55,7 +64,9 @@ def process_data(data, port):
 			send_message([forwarding_table[data['dest']]], str(json.dumps(data)))
 		else:
 			# If the destination of the packet is NOT in the forwarding table, send to designated port and root port
-			send_message(designated_ports + root_port, str(json.dumps(data)))
+			ports_to_send = designated_ports + root_port if root_port is not None else designated_ports
+			send_message(ports_to_send, str(json.dumps(data)))
+
 
 # Read the BPDU packet and take neccesary actions
 def read_bpdu(data, port):
@@ -63,28 +74,35 @@ def read_bpdu(data, port):
 	d_root = data['root']
 	d_cost = data['cost']
 
-	if root_port != None and root == d_root:
+	if (root_port == None or root_port != port) and root == d_root:
 		if cost < d_cost or (cost == d_cost and int(root, 16) < int(d_root, 16)):
 			# Add the port as a designated port
 			designated_ports.append(port)
 			# Flush the forwarding table
-			forwarding_table = []
-			print "Designated port: " + id + "/" + port.getsocketname()
+			forwarding_table.clear()
+			print "Designated port: " + id + "/" + str(sockets.index(port))
+		elif port in designated_ports:
+			# TODO: For simple-2.conf, all ports are removed as designated eventually
+			# so the test case fails. Need to fix logic to not do this and also avoid loop
+			print "TEST: " + str(cost) + " --- " + str(d_cost)
+			designated_ports.remove(port) 
+			# Flush the forwarding table
+			forwarding_table.clear()
+			print "Disabled port: " + id + "/" + str(sockets.index(port))
 
-	if int(d_root, 16) < int(root, 16):
+	if (d_cost == cost and int(d_root, 16) < int(root, 16)) or (d_cost < cost):
 		# If bridge_id of BPDU is less than current, change the root
 		root = d_root
 		print "New root: " + id + "/" + root
-
-	if (d_cost == cost and int(d_root, 16) < int(root, 16)) or (d_cost < cost):
 		# Set a new root port and the associated cost + 1
 		cost = d_cost + 1
 		root_port = port
-		print "Root port: " + id + "/" + x.getsocketname()
+		print "Root port: " + id + "/" + str(sockets.index(port))
 		# Flush the forwarding table
-		forwarding_table = []
+		forwarding_table.clear()
 		# Send out another round of BPDUs
-		send_bpdu(sockets)
+		send_bpdu()
+	print "DESIGNATED: " + str(designated_ports)
 
 
 if __name__ == "__main__":
@@ -101,17 +119,18 @@ if __name__ == "__main__":
 	cost = 0
 	# Port that connects to the current root node (Defaults to this bridge, None)
 	root_port = None
-	# List of designated ports
-	designated_ports = []
 	# List representing the bridge forwarding table
-	forwarding_table = {}
+	forwarding_table = dict()
 
 	# Creates sockets and connects to them
 	for x in range(len(LAN)):
 		s = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
 		s.connect(pad(LAN[x]))
 		sockets.append(s)
-	print "Bridge " + id + " starting up\n"
+
+	# List of designated ports
+	designated_ports = list(sockets)
+	print "Bridge " + id + " starting up"
 
 	# Current time, serves to start a timer
 	t = time.time()
@@ -126,6 +145,6 @@ if __name__ == "__main__":
 
 		# If 500ms has passed, send out BPDUs
 		if (time.time() - t) > 0.5:
-			send_bpdu(ready)
+			send_bpdu()
 			# Reset the timer
 			t = time.time()
