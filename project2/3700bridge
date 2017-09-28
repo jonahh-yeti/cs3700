@@ -28,7 +28,7 @@ def send_bpdu():
 	read, write, ignore2 = select.select(sockets, sockets, [], 1)
 	for x in write:
 		# Create and send the BPDU JSON packet
-		p = packet(x.getpeername(), 'bpdu', str(json.dumps(message)))
+		p = packet('ffff', 'bpdu', str(json.dumps(message)))
 		x.sendall(p)
 
 
@@ -55,7 +55,6 @@ def process_data(data, port):
 
 	if port in designated_ports:
 		print "Received message " + str(data['message']['id']) + " on port " + str(sockets.index(port)) + " from " + data['source'] + " to " + data['dest']
-		print("FORWARDING TABLE: " + str(forwarding_table))
 		if data['source'] not in forwarding_table:
 			# Create a forwarding table entry for the source of the packet if one does not already exist
 			forwarding_table[data['source']] = port
@@ -82,13 +81,19 @@ def read_bpdu(data, port):
 			forwarding_table.clear()
 			print "Designated port: " + id + "/" + str(sockets.index(port))
 		elif port in designated_ports:
-			# TODO: For simple-2.conf, all ports are removed as designated eventually
-			# so the test case fails. Need to fix logic to not do this and also avoid loop
-			print "TEST: " + str(cost) + " --- " + str(d_cost)
-			designated_ports.remove(port) 
-			# Flush the forwarding table
-			forwarding_table.clear()
-			print "Disabled port: " + id + "/" + str(sockets.index(port))
+			# IF a BPDU is received from self, check all designated ports against the port it was received on
+			# Remove other ports with the same addr from designated
+			if data['id'] == id:
+				for x in designated_ports:
+					if x != port and x.getpeername() == port.getpeername() and x in designated_ports:
+						designated_ports.remove(x)
+						forwarding_table.clear()
+						print "Disabled port: " + id + "/" + str(sockets.index(x))
+			else:
+				designated_ports.remove(port) 
+				# Flush the forwarding table
+				forwarding_table.clear()
+				print "Disabled port: " + id + "/" + str(sockets.index(port))
 
 	if (d_cost == cost and int(d_root, 16) < int(root, 16)) or (d_cost < cost):
 		# If bridge_id of BPDU is less than current, change the root
@@ -102,7 +107,6 @@ def read_bpdu(data, port):
 		forwarding_table.clear()
 		# Send out another round of BPDUs
 		send_bpdu()
-	print "DESIGNATED: " + str(designated_ports)
 
 
 if __name__ == "__main__":
