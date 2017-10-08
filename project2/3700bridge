@@ -28,6 +28,13 @@ def send_bpdu():
 	for x in write:
 		# Create and send the BPDU JSON packet
 		p = packet('ffff', 'bpdu', str(json.dumps(message)))
+		if sockets.index(x) not in BPDUs:
+			BPDUs[sockets.index(x)] = (json.loads(p), time.time)
+		else:	
+			better = comp_bpdu(BPDUs[sockets.index(x)][0], json.loads(p))
+			if better:
+				better['message']['cost'] = better['message']['cost'] + 1
+				BPDUs[sockets.index(x)] = (better, time.time())
 		x.sendall(p)
 
 
@@ -42,7 +49,7 @@ def read_packet(data, port):
 	data = json.loads(data)
 	if data['type'] == 'bpdu':
 		# The packet is a BPDU packet
-		return read_bpdu(json.loads(data['message']), port)
+		return read_bpdu(json.loads(data['message']), data, port)
 	elif data['type'] == 'data':
 		# The packet is of some other type
 		return process_data(data, port)
@@ -69,12 +76,62 @@ def process_data(data, port):
 	else: 
 		print "Not forwarding message " + str(data['message']['id'])
 
+# Compare two BPDUs, return the second if it's better, otherwise return None
+def comp_bpdu(packet1, packet2):
+	data1 = json.loads(packet1['message'])
+	data2 = json.loads(packet2['message'])
+	
+	if int(data2['root'], 16) < int(data1['root'], 16):
+		return pakcet2
+	if int(data2['root'], 16) == int(data1['root'], 16):
+		if data2['cost'] < data1['cost']:
+			return packet2
+		if data2['cost'] == data1['cost'] and int(packet2['source'], 16) < int(packet1['source'], 16):
+			return packet2
+	return None
+
+# go through the BPDUs for each port, updating root port and designated ports
+def process_bpdus():
+	global BPDUs, root, cost
+	for key, val in BPDUs:
+		data = val[0]
+		# BPDU shows a lower ID root
+		if int(data['message']['root'], 16) < int(root, 16):
+			# BPDU shows a lower or equal cost
+			root = data['message']['root']
+			cost = data['message']['cost']
+			# NEW ROOT PORT
+		# BPDU matches our known root ID
+		elif int(data['message']['root'], 16) == int(root, 16):
+			# BPDU shows a lower cost on this port
+			if data['message']['cost'] < cost:
+				cost = data['message']['cost']
+				# NEW ROOT PORT
+			# BPDU shows an equal cost for this port
+			elif data['message']['cost'] == cost:
+				# Source ID of this bpdu lower than current RP
+				if int(data['source'], 16) < int(BPDUs[sockets.index(root_port)]['source'], 16):
+					# NEW ROOT PORT
+				# Source ID of this bpdu equal to current RP
+				elif int(data['source'], 16) == int(BPDUs[sockets.index(root_port)]['source'], 16):
+					# determine behavior for this
+
 
 # Read the BPDU packet and take neccesary actions
-def read_bpdu(data, port):
-	global cost, root, root_port, designated_ports, forwarding_table
+def read_bpdu(data, packet, port):
+	global cost, root, root_port, designated_ports, forwarding_table, BPDUs
 	d_root = data['root']
 	d_cost = data['cost']
+
+	if sockets.index(port) in BPDUs:
+		better = comp_bpdu(BPDUs[sockets.index(port)][0], packet)
+		if better:
+			better['message']['cost'] = better['message']['cost'] + 1
+			BPDUs[sockets.index(port)] = (better, time.time())
+	else:
+		temp = packet
+		packet['message']['cost'] = packet['message']['cost'] + 1
+		BPDUs[sockets.index(port)] = (temp, time.time())
 
 	if (root_port == None or root_port != port) and root == d_root:
 		if port not in designated_ports and (cost < d_cost or (cost == d_cost and int(root, 16) < int(d_root, 16))):
@@ -117,8 +174,6 @@ def read_bpdu(data, port):
 				print "same as root: Disabled port: " + id + "/" + str(sockets.index(x))
 		# Flush the forwarding table
 		forwarding_table.clear()
-		# Send out another round of BPDUs
-		send_bpdu()
 
 if __name__ == "__main__":
 	# Global variables ---
@@ -136,6 +191,8 @@ if __name__ == "__main__":
 	root_port = None
 	# List representing the bridge forwarding table
 	forwarding_table = dict()
+	# Best BPDU for a given port
+	BPDUs = dict()
 
 	# Creates sockets and connects to them
 	for x in range(len(LAN)):
@@ -149,6 +206,7 @@ if __name__ == "__main__":
 	print "Bridge " + id + " starting up"
 
 	# Current time, serves to start a timer
+	send_bpdu()
 	t = time.time()
 	# Main loop
 	while True:
