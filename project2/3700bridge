@@ -15,8 +15,8 @@ def pad(name):
 
 
 # Create a JSON string representation of a packet
-def packet(dest, form, message):
-	packet = {'source': id, 'dest': dest, 'type':form, 'message':message}
+def packet(source, dest, form, message):
+	packet = {'source': source, 'dest': dest, 'type':form, 'message':message}
 	return packet
 
 
@@ -26,15 +26,16 @@ def send_bpdu():
 	# Calls select with all the sockets; change the timeout value (1)
 	read, write, ignore2 = select.select(sockets, sockets, [], 1)
 	for x in write:
+		port_num = sockets.index(x)
 		# Create and send the BPDU JSON packet
-		p = packet('ffff', 'bpdu', message)
-		if sockets.index(x) not in BPDUs:
-			BPDUs[sockets.index(x)] = (p, time.time)
+		p = packet(id + "/" + str(port_num), 'ffff', 'bpdu', message)
+		if port_num not in BPDUs:
+			BPDUs[port_num] = (p, time.time)
 		else:	
-			better = comp_bpdu(BPDUs[sockets.index(x)][0], p)
+			better = comp_bpdu(BPDUs[port_num][0], p)
 			if better:
 				better['message']['cost'] = better['message']['cost'] + 1
-				BPDUs[sockets.index(x)] = (better, time.time())
+				BPDUs[port_num] = (better, time.time())
 		x.sendall(str(json.dumps(p)))
 
 
@@ -60,7 +61,7 @@ def read_packet(data, port):
 # Process a non-BPDU packet
 def process_data(data, port):
 	global forwarding_table
-	print "DESIG PORTS" + str(designated_ports)
+	# print "DESIG PORTS" + str(designated_ports)
 	if port in designated_ports:
 		print "Received message " + str(data['message']['id']) + " on port " + str(sockets.index(port)) + " from " + data['source'] + " to " + data['dest']
 		if data['source'] not in forwarding_table:
@@ -88,7 +89,7 @@ def comp_bpdu(packet1, packet2):
 	if int(data2['root'], 16) == int(data1['root'], 16):
 		if data2['cost'] < data1['cost']:
 			return packet2
-		if data2['cost'] == data1['cost'] and int(packet2['source'], 16) < int(packet1['source'], 16):
+		if data2['cost'] == data1['cost'] and int(packet2['source'].split("/")[0], 16) < int(packet1['source'].split("/")[0], 16):
 			return packet2
 	return None
 
@@ -119,21 +120,55 @@ def comp_bpdu(packet1, packet2):
 					# # determine behavior for this
 
 
+def designate_port(port, source):
+	global designated_ports
+	if port not in designated_ports:
+		designated_ports.append(port)
+		print("Designated port: " + source)
+		
+def disable_port(port, port_num):
+	global designated_ports
+	if port in designated_ports:
+		designated_ports.remove(x)
+		print("Disabled port: " + id + "/" + str(port_num))
+		
+def print_ports():
+	s = "DESIGNATED: "
+	for port in designated_ports:
+		s = s + " " + str(sockets.index(port))
+	if root_port:
+		s = s + "\nROOT: " + str(sockets.index(root_port))
+	else:
+		s = s + "\nROOT: None"
+	print s
+
+
 # Read the BPDU packet and take neccesary actions
 def read_bpdu(data, packet, port):
 	global cost, root, root_port, designated_ports, forwarding_table, BPDUs
+	port_num = sockets.index(port)
 	d_root = data['root']
 	d_cost = data['cost']
+	
+	# Handle receiving our own BDPU
+	d_source_id, d_source_port = packet['source'].split("/")
+	if d_source_id == id:
+		if d_source_port == port_num:
+			# The BPDU was sent on this port, designate this port
+			designate_port(port, packet['source'])
+		else:
+			# The BPDU was sent on a different port, disable this port
+			disable_port(port, port_num)
 
-	if sockets.index(port) in BPDUs:
-		better = comp_bpdu(BPDUs[sockets.index(port)][0], packet)
+	if port_num in BPDUs:
+		better = comp_bpdu(BPDUs[port_num][0], packet)
 		if better:
 			better['message']['cost'] = better['message']['cost'] + 1
-			BPDUs[sockets.index(port)] = (better, time.time())
+			BPDUs[port_num] = (better, time.time())
 	else:
 		temp = packet
 		packet['message']['cost'] = packet['message']['cost'] + 1
-		BPDUs[sockets.index(port)] = (temp, time.time())
+		BPDUs[port_num] = (temp, time.time())
 
 	if (root_port == None or root_port != port) and root == d_root:
 		if port not in designated_ports and (cost < d_cost or (cost == d_cost and int(root, 16) < int(d_root, 16))):
@@ -143,24 +178,24 @@ def read_bpdu(data, packet, port):
 			for x in designated_ports:
 				if x != port and x.getpeername() == port.getpeername():
 					designated_ports.remove(x)
-					print "lower cost: Disabled port: " + id + "/" + str(sockets.index(x))
+					print "lower cost: Disabled port: " + id + "/" + str(port_num)
 			forwarding_table.clear()
-			print str(root_port == None or root_port != port) + "lower cost: Designated port: " + id + "/" + str(sockets.index(port))
+			# print str(root_port == None or root_port != port) + "lower cost: Designated port: " + id + "/" + str(sockets.index(port))
 		elif port in designated_ports:
-			# IF a BPDU is received from self, check all designated ports against the port it was received on
+			# If a BPDU is received from self, check all designated ports against the port it was received on
 			# Remove other ports with the same addr from designated
 			if data['id'] == id or root == id:
-				print data
+				# print data
 				for x in designated_ports:
 					if x != port and x.getpeername() == port.getpeername():
 						designated_ports.remove(x)
 						forwarding_table.clear()
-						print "sender = receiver: Disabled port: " + id + "/" + str(sockets.index(x))
+						print "sender = receiver: Disabled port: " + id + "/" + str(port_num)
 			else:
 				designated_ports.remove(port) 
 				# Flush the forwarding table
 				forwarding_table.clear()
-				print "port not designated: Disabled port: " + id + "/" + str(sockets.index(port))
+				print "port not designated: Disabled port: " + id + "/" + str(port_num)
 	
 	if (d_cost == cost and int(d_root, 16) < int(root, 16)) or (d_cost < cost):
 		# If bridge_id of BPDU is less than current, change the root
@@ -169,11 +204,11 @@ def read_bpdu(data, packet, port):
 		# Set a new root port and the associated cost + 1
 		cost = d_cost + 1
 		root_port = port
-		print "Root port: " + id + "/" + str(sockets.index(port))
+		print "Root port: " + id + "/" + str(port_num)
 		for x in designated_ports:
 			if x.getpeername() == port.getpeername():
 				designated_ports.remove(x)
-				print "same as root: Disabled port: " + id + "/" + str(sockets.index(x))
+				print "same as root: Disabled port: " + id + "/" + str(port_num)
 		# Flush the forwarding table
 		forwarding_table.clear()
 
