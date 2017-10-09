@@ -61,6 +61,7 @@ def read_packet(data, port):
 # Process a non-BPDU packet
 def process_data(data, port):
 	global forwarding_table
+	# print "DESIG PORTS" + str(designated_ports)
 	if port in designated_ports:
 		print "Received message " + str(data['message']['id']) + " on port " + str(sockets.index(port)) + " from " + data['source'] + " to " + data['dest']
 		if data['source'] not in forwarding_table:
@@ -123,13 +124,13 @@ def designate_port(port, source):
 	global designated_ports
 	if port not in designated_ports:
 		designated_ports.append(port)
-		print_ports()
+		print("Designated port: " + source)
 		
 def disable_port(port, port_num):
 	global designated_ports
 	if port in designated_ports:
 		designated_ports.remove(x)
-		print_ports()
+		print("Disabled port: " + id + "/" + str(port_num))
 		
 def print_ports():
 	s = "DESIGNATED: "
@@ -238,7 +239,7 @@ if __name__ == "__main__":
 
 	# List of designated ports
 	designated_ports = list(sockets)
-	print_ports()
+	print "DESIG PORTS" + str(designated_ports)
 	print "Bridge " + id + " starting up"
 
 	# Current time, serves to start a timer
