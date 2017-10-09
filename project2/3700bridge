@@ -120,11 +120,15 @@ def comp_bpdu(packet1, packet2):
 					# # determine behavior for this
 
 
-def designate_port(port, source):
-	global designated_ports
+# Designate given port at given port_num
+def designate_port(port, port_num):
+	global designated_ports, forwarding_table
 	if port not in designated_ports:
 		designated_ports.append(port)
-		print("Designated port: " + source)
+		print("Designated port: " + id + "/" + port_num)
+		# Flush the forwarding table
+		forwarding_table.clear()
+
 		
 def disable_port(port, port_num):
 	global designated_ports
@@ -149,13 +153,14 @@ def read_bpdu(data, packet, port):
 	port_num = sockets.index(port)
 	d_root = data['root']
 	d_cost = data['cost']
+	d_source = packet['source']
 	
 	# Handle receiving our own BDPU
-	d_source_id, d_source_port = packet['source'].split("/")
+	d_source_id, d_source_port = d_source.split("/")
 	if d_source_id == id:
 		if d_source_port == port_num:
 			# The BPDU was sent on this port, designate this port
-			designate_port(port, packet['source'])
+			designate_port(port, port_num)
 		else:
 			# The BPDU was sent on a different port, disable this port
 			disable_port(port, port_num)
@@ -173,7 +178,7 @@ def read_bpdu(data, packet, port):
 	if (root_port == None or root_port != port) and root == d_root:
 		if port not in designated_ports and (cost < d_cost or (cost == d_cost and int(root, 16) < int(d_root, 16))):
 			# Add the port as a designated port
-			designated_ports.append(port)
+			designate_port(port, d_source)
 			# Flush the forwarding table
 			for x in designated_ports:
 				if x != port and x.getpeername() == port.getpeername():
