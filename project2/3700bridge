@@ -44,13 +44,12 @@ def send_bpdu():
 	global t
 	message = {'id': id, 'root': root, 'cost': cost}
 	# Calls select with all the sockets; change the timeout value (1)
-	read, write, ignore2 = select.select(sockets, sockets, [], 0.1)
-	for x in write:
+	for x in sockets:
 		port_num = port_id(x)
 		# Create and send the BPDU JSON packet
 		p = packet(id + "/" + str(port_num), 'ffff', 'bpdu', message)
 		if port_num not in BPDUs:
-			BPDUs[port_num] = (p, time.time)
+			BPDUs[port_num] = (p, time.time())
 		else:	
 			better = comp_bpdu(BPDUs[port_num][0], p)
 			if better:
@@ -63,8 +62,7 @@ def send_bpdu():
 # Send a message to all sockets
 def send_message(ports_to_send, message):
 	# Calls select with all the sockets; change the timeout value (1)
-	read, write, ignore2 = select.select(ports_to_send, ports_to_send, [], 0.1)
-	for x in write:
+	for x in ports_to_send:
 		x.sendall(message)
 
 
@@ -132,8 +130,11 @@ def change_root(port, new_root, new_cost):
 		print "New root: " + id + "/" + root
 	if new_cost:
 		cost = new_cost
+	old_port = root_port
 	root_port = port
 	disable_port(port)
+	if old_port is not None:
+		designate_port(old_port)
 	print "Root port: " + id + "/" + str(port_id(port))
 	forwarding_table.clear()
 	send_bpdu()
@@ -162,6 +163,8 @@ def read_bpdu(data, packet, port):
 		if better:
 			temp = better.copy()
 			BPDUs[port_num] = (better, time.time())
+		else:
+			BPDUs[port_num] = (BPDUs[port_num][0], time.time())
 	else:
 		temp = packet.copy()
 		BPDUs[port_num] = (temp, time.time())
@@ -208,21 +211,25 @@ def handle_bpdu(packet, port):
 	print_ports()
 
 def timeouts():
+	global forwarding_table, BPDUs, cost, root, root_port, designated_ports
 	# Timeout forwarding table entries after five seconds
-	for key in forwarding_table.keys():
-		if time.time() - forwarding_table[key][1] > 5:
-			del forwarding_table[key]
-			
+	if len(forwarding_table) > 0:
+		for key in forwarding_table.keys():
+			if time.time() - forwarding_table[key][1] > 5:
+				del forwarding_table[key]
+				
 	# Timeout BPDUs if not refreshed after .750 seconds
-	for key in BPDUs.keys():
-		if time.time() - BPDUs[key][1] > 0.75:
-			cost = 0
-			root = id
-			root_port = None
-			forwarding_table = dict()
-			BPDUs = dict()
-			designated_ports = list(sockets)
-			send_bpdu()
+	if len(BPDUs) > 0:
+		for key in BPDUs.keys():
+			if time.time() - BPDUs[key][1] > 0.75:
+				cost = 0
+				root = id
+				root_port = None
+				forwarding_table = dict()
+				BPDUs = dict()
+				designated_ports = list(sockets)
+				send_bpdu()
+
 
 if __name__ == "__main__":
 	# Global variables ---
@@ -242,7 +249,7 @@ if __name__ == "__main__":
 	forwarding_table = dict()
 	# Best BPDU for a given port
 	BPDUs = dict()
-
+	
 	# Creates sockets and connects to them
 	for x in range(len(LAN)):
 		s = socket.socket(socket.AF_UNIX, socket.SOCK_SEQPACKET)
@@ -259,8 +266,9 @@ if __name__ == "__main__":
 	t = time.time()
 	# Main loop
 	while True:
+		timeouts()
 		# Calls select with designated sockets; change the timeout value (1)
-		ready, ignore, ignore2 = select.select(sockets, [], [], 0.1)
+		ready, ignore, ignore2 = select.select(sockets, [], [], 0.25)
 		# Reads from each of the ready sockets
 		for x in ready:
 			data = x.recv(1500)
