@@ -6,6 +6,7 @@ import select
 import json
 import time
 
+
 # Pads the name with null bytes at the end
 def pad(name):
 	result = '\0' + name
@@ -196,6 +197,7 @@ def read_bpdu(data, packet, port):
 				print "(same as root)"
 		# Flush the forwarding table
 		forwarding_table.clear()
+	print_ports()
 
 if __name__ == "__main__":
 	# Global variables ---
@@ -224,7 +226,7 @@ if __name__ == "__main__":
 
 	# List of designated ports
 	designated_ports = list(sockets)
-	print "DESIG PORTS" + str(designated_ports)
+	print_ports()
 	print "Bridge " + id + " starting up"
 
 	# Current time, serves to start a timer
