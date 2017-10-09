@@ -27,6 +27,7 @@ def print_ports():
 		s = s + "\nROOT: " + str(port_id(root_port))
 	else:
 		s = s + "\nROOT: None"
+	s = s + " | COST: " + str(cost)
 	print s
 
 # Create a JSON string representation of a packet
@@ -50,7 +51,7 @@ def send_bpdu():
 		p = packet(id + "/" + str(port_num), 'ffff', 'bpdu', message)
 		if port_num not in BPDUs:
 			BPDUs[port_num] = (p, time.time())
-		else:	
+		else:
 			better = comp_bpdu(BPDUs[port_num][0], p)
 			if better:
 				temp = better.copy()
@@ -68,13 +69,17 @@ def send_message(ports_to_send, message):
 
 # Determine the type of a packet and read the data
 def read_packet(data, port):
+	global buffer
 	data = json.loads(data)
 	if data['type'] == 'bpdu':
 		# The packet is a BPDU packet
 		return read_bpdu(data['message'], data, port)
 	elif data['type'] == 'data':
 		# The packet is of some other type
-		return process_data(data, port)
+		if tree_comp:
+			return process_data(data, port)
+		else:
+			buffer.append((data, port))
 
 
 # Process a non-BPDU packet
@@ -150,6 +155,8 @@ def comp_bpdu(packet1, packet2):
 	if int(data2['root'], 16) < int(data1['root'], 16):
 		return packet2
 	if int(data2['root'], 16) == int(data1['root'], 16):
+		if packet1['source'] == packet2['source']:
+			return packet2
 		if data2['cost'] < data1['cost']:
 			return packet2
 		if data2['cost'] == data1['cost'] and int(packet2['source'].split("/")[0], 16) <= int(packet1['source'].split("/")[0], 16):
@@ -211,10 +218,12 @@ def handle_bpdu(packet, port):
 				# received on lower port id, disable sender
 				elif sent_port > received_port and port in designated_ports:
 					disable_port(sockets[sent_port])
+				elif sent_port == received_port:
+					designate_port(port)
 	print_ports()
 
 def timeouts():
-	global forwarding_table, BPDUs, cost, root, root_port, designated_ports
+	global forwarding_table, BPDUs, cost, root, root_port, designated_ports, tree_comp
 	# Timeout forwarding table entries after five seconds
 	if len(forwarding_table) > 0:
 		for key in forwarding_table.keys():
@@ -222,9 +231,12 @@ def timeouts():
 				del forwarding_table[key]
 				
 	# Timeout BPDUs if not refreshed after .750 seconds
+	stat = True
 	if len(BPDUs) > 0:
 		for key in BPDUs.keys():
+			stat = stat and (int(BPDUs[key][0]['message']['root'], 16) == int(root, 16))
 			if time.time() - BPDUs[key][1] > 0.75:
+				print 'RUINED'
 				cost = 0
 				root = id
 				root_port = None
@@ -232,7 +244,7 @@ def timeouts():
 				BPDUs = dict()
 				designated_ports = list(sockets)
 				send_bpdu()
-
+	tree_comp = stat
 
 if __name__ == "__main__":
 	# Global variables ---
@@ -252,6 +264,8 @@ if __name__ == "__main__":
 	forwarding_table = dict()
 	# Best BPDU for a given port
 	BPDUs = dict()
+	buffer = list()
+	tree_comp = False
 	
 	# Creates sockets and connects to them
 	for x in range(len(LAN)):
@@ -270,13 +284,18 @@ if __name__ == "__main__":
 	# Main loop
 	while True:
 		timeouts()
+		if tree_comp and len(buffer) > 0:
+			buffer.reverse()
+			for item in buffer:
+				process_data(item[0], item[1])
+	
 		# Calls select with designated sockets; change the timeout value (1)
 		ready, ignore, ignore2 = select.select(sockets, [], [], 0.25)
 		# Reads from each of the ready sockets
 		for x in ready:
 			data = x.recv(1500)
 			read_packet(data, x)
-
+		
 		# If 500ms has passed, send out BPDUs
 		if (time.time() - t) > 0.5:
 			send_bpdu()
