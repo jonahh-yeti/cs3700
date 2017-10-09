@@ -93,17 +93,21 @@ def process_data(data, port):
 			# If the destination of the packet is in the forwarding table, send to proper port
 			print "Forwarding message " + str(data['message']['id']) + " to port " + str(port_id(port))
 			send_to = [forwarding_table[data['dest']][0]]
+			# Verify we are not sending to the port that the packet came from
 			if port not in send_to:
 				send_message(send_to, str(json.dumps(data)))
+			else:
+				print "Not forwarding message " + str(data['message']['id']) + " to port " + str(port_id(port))
 		else:
-			# If the destination of the packet is NOT in the forwarding table, send to designated port and root port
+			# If the destination of the packet is NOT in the forwarding table, send to designated ports and root port
 			ports_to_send = list(designated_ports) + [root_port] if root_port is not None else list(designated_ports)
+			# Verify we are not sending to the port that the packet came from
 			if port in ports_to_send:
 				ports_to_send.remove(port)
 			print "Broadcasting message " + str(data['message']['id']) + " to all ports"
 			send_message(ports_to_send, str(json.dumps(data)))
 
-# Designate given port at given port_num
+# Designate given port
 def designate_port(port):
 	global designated_ports, forwarding_table
 	if port not in designated_ports and port != root_port:
@@ -111,12 +115,9 @@ def designate_port(port):
 		print("Designated port: " + id + "/" + str(port_id(port)))
 		# Flush the forwarding table
 		forwarding_table.clear()
-	# for x in designated_ports:
-		# if x != port and x.getpeername() == port.getpeername():
-			# disable_port(x)
 
 
-# Disable given port at given port_num		
+# Disable given port		
 def disable_port(port):
 	global designated_ports
 	if port in designated_ports:
@@ -125,6 +126,7 @@ def disable_port(port):
 	# Flush the forwarding table
 	forwarding_table.clear()
 
+# Changes the root for this bridge
 def change_root(port, new_root, new_cost):
 	global root_port, root, cost
 	if new_root:
@@ -133,6 +135,7 @@ def change_root(port, new_root, new_cost):
 	if new_cost:
 		cost = new_cost
 	root_port = port
+	# Un-designate the root port
 	disable_port(port)
 	print "Root port: " + id + "/" + str(port_id(port))
 	forwarding_table.clear()
