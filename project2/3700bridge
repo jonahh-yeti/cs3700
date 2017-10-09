@@ -138,6 +138,8 @@ def disable_port(port, port_num):
 	if port in designated_ports:
 		designated_ports.remove(x)
 		print("Disabled port: " + id + "/" + str(port_num))
+	# Flush the forwarding table
+	forwarding_table.clear()
 		
 def print_ports():
 	s = "DESIGNATED: "
@@ -157,16 +159,6 @@ def read_bpdu(data, packet, port):
 	d_root = data['root']
 	d_cost = data['cost']
 	d_source = packet['source']
-	
-	# Handle receiving our own BDPU
-	d_source_id, d_source_port = d_source.split("/")
-	if d_source_id == id:
-		if d_source_port == port_num:
-			# The BPDU was sent on this port, designate this port
-			designate_port(port, port_num)
-		else:
-			# The BPDU was sent on a different port, disable this port
-			disable_port(port, port_num)
 
 	if port_num in BPDUs:
 		better = comp_bpdu(BPDUs[port_num][0], packet)
