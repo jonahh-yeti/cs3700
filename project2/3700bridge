@@ -17,18 +17,6 @@ def pad(name):
 # GET PORT ID FOR A PORT
 def port_id(port):
 	return sockets.index(port)
-	
-# PRINT DESIG PORTS AND ROOT PORTS
-def print_ports():
-	s = "DESIGNATED: "
-	for port in designated_ports:
-		s = s + " " + str(port_id(port))
-	if root_port:
-		s = s + "\nROOT: " + str(port_id(root_port))
-	else:
-		s = s + "\nROOT: None"
-	s = s + " | COST: " + str(cost)
-	print s
 
 # Create a JSON string representation of a packet
 def packet(source, dest, form, message):
@@ -134,7 +122,7 @@ def disable_port(port):
 		# Flush the forwarding table
 		clear_table(port)
 
-# Changes the root for this bridge
+# Changes the root for this bridge, with option to change root id, cost or both along with the port
 def change_root(port, new_root, new_cost):
 	global root_port, root, cost
 	if new_root:
@@ -158,8 +146,10 @@ def comp_bpdu(packet1, packet2):
 	data1 = packet1['message']
 	data2 = packet2['message']
 	
+	# Found one with a smaller root id
 	if int(data2['root'], 16) < int(data1['root'], 16):
 		return packet2
+	# Equal root IDs
 	if int(data2['root'], 16) == int(data1['root'], 16):
 		if packet1['source'] == packet2['source']:
 			return packet2
@@ -174,6 +164,7 @@ def read_bpdu(data, packet, port):
 	global cost, root, root_port, designated_ports, forwarding_table, BPDUs
 	port_num = port_id(port)
 
+	# Deals with BPDU comparisons
 	if port_num in BPDUs:
 		better = comp_bpdu(BPDUs[port_num][0], packet)
 		if better:
@@ -181,6 +172,7 @@ def read_bpdu(data, packet, port):
 			BPDUs[port_num] = (better, time.time())
 		else:
 			BPDUs[port_num] = (BPDUs[port_num][0], time.time())
+	# If for some reason there's nothing in BPDUs for this
 	else:
 		temp = packet.copy()
 		BPDUs[port_num] = (temp, time.time())
@@ -188,7 +180,7 @@ def read_bpdu(data, packet, port):
 	handle_bpdu(BPDUs[port_num][0], port)
 
 
-
+# Processes a BPDU once the best one for a port has been decided upon
 def handle_bpdu(packet, port):
 	data = packet['message']
 	
@@ -226,8 +218,8 @@ def handle_bpdu(packet, port):
 					disable_port(sockets[sent_port])
 				elif sent_port == received_port:
 					designate_port(port)
-	print_ports()
 
+# Handle timeouts for forwarding table and BPDUs, also checks whether the tree is complete
 def timeouts():
 	global forwarding_table, BPDUs, cost, root, root_port, designated_ports, tree_comp
 	# Timeout forwarding table entries after five seconds
@@ -240,9 +232,9 @@ def timeouts():
 	stat = True
 	if len(BPDUs) > 0:
 		for key in BPDUs.keys():
+			# monitors tree completion based on if all have the same root
 			stat = stat and (int(BPDUs[key][0]['message']['root'], 16) == int(root, 16))
 			if time.time() - BPDUs[key][1] > 0.75:
-				print 'RUINED'
 				cost = 0
 				root = id
 				root_port = None
@@ -281,7 +273,6 @@ if __name__ == "__main__":
 
 	# List of designated ports
 	designated_ports = list(sockets)
-	print_ports()
 	print "Bridge " + id + " starting up"
 
 	# Current time, serves to start a timer
