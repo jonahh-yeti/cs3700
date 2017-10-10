@@ -1,0 +1,12 @@
+The main code for this project is written in python, since the socket implementation in python is easy to use.
+
+We started out by following the implementation outline on the project page,
+initially focusing on the spanning tree algorithm and making sure our debugging was working properly.
+By having detailed logs, it made following packets through the system much easier
+and we were able to work from there. There were almost no problems with the forwarding tables,
+however our spanning tree algorithm was constantly a problem due to a number of complex edge cases.
+For testing, we simply used the various test scripts available to us. They were very helpful in
+determining which packets were problematic, drawing a diagram, and determining the edge case that was missing.
+We were then able to fine tune for the remaining handful of missing packets by doing things like clearing
+the forwarding table more intelligently.
+ 
