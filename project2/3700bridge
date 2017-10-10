@@ -226,7 +226,6 @@ def handle_bpdu(packet, port):
 					disable_port(sockets[sent_port])
 				elif sent_port == received_port:
 					designate_port(port)
-	print_ports()
 
 def timeouts():
 	global forwarding_table, BPDUs, cost, root, root_port, designated_ports, tree_comp
@@ -281,7 +280,6 @@ if __name__ == "__main__":
 
 	# List of designated ports
 	designated_ports = list(sockets)
-	print_ports()
 	print "Bridge " + id + " starting up"
 
 	# Current time, serves to start a timer
