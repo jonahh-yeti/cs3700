@@ -110,6 +110,11 @@ def process_data(data, port):
 			print "Broadcasting message " + str(data['message']['id']) + " to all ports"
 			send_message(ports_to_send, str(json.dumps(data)))
 
+def clear_table(port):
+	for key in forwarding_table.keys():
+		if forwarding_table[key][0] == port:
+			del forwarding_table[key]
+			
 # Designate given port
 def designate_port(port):
 	global designated_ports, forwarding_table
@@ -117,7 +122,7 @@ def designate_port(port):
 		designated_ports.append(port)
 		print("Designated port: " + id + "/" + str(port_id(port)))
 		# Flush the forwarding table
-		forwarding_table.clear()
+		clear_table(port)
 
 
 # Disable given port		
@@ -126,8 +131,8 @@ def disable_port(port):
 	if port in designated_ports:
 		designated_ports.remove(port)
 		print("Disabled port: " + id + "/" + str(port_id(port)))
-	# Flush the forwarding table
-	forwarding_table.clear()
+		# Flush the forwarding table
+		clear_table(port)
 
 # Changes the root for this bridge
 def change_root(port, new_root, new_cost):
@@ -143,8 +148,9 @@ def change_root(port, new_root, new_cost):
 	disable_port(port)
 	if old_port is not None:
 		designate_port(old_port)
+		clear_table(old_port)
 	print "Root port: " + id + "/" + str(port_id(port))
-	forwarding_table.clear()
+	clear_table(port)
 	send_bpdu()
 
 # Compare two BPDUs, return the second if it's better, otherwise return None
