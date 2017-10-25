@@ -75,9 +75,12 @@ while True:
         log("[recv ack] " + str(decoded_ack))
         # remove current sequence from sequence list
         processAck(decoded_ack)
+        log(str(sequences))
 
         ack_counter += 1
         if ack_counter == window_size:
+          ack_counter = 0
+          log('met window size')
 
           if sequences:
             log("retransmit sequences still present")
