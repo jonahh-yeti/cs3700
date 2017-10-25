@@ -71,12 +71,14 @@ while True:
       decoded = json.loads(data)
 
       decoded_ack = decoded['ack']
+      log(decoded_ack)
+      log('before ' + str(sequences))
       # If there is an ack, send next packet
       if decoded_ack in sequences:
         log("[recv ack] " + str(decoded_ack))
         # remove current sequence from sequence list
         processAck(decoded_ack)
-        log(str(sequences))
+        log('after ' + str(sequences))
 
         ack_counter += 1
         if ack_counter == window_size:
@@ -88,7 +90,7 @@ while True:
 
           window_size *= 2
           send_count = 0
-              
+
     except (ValueError, KeyError, TypeError):
       log("[recv corrupt packet]")
   else:
