@@ -55,6 +55,7 @@ def processAck(ack):
 window_size = 1
 ack_counter = 0
 sequences = []
+send_count = 0
 
 # Send first packet
 send_next_packet()
@@ -86,19 +87,19 @@ while True:
             log("retransmit sequences still present")
 
           window_size *= 2
-
-          # Try to send next packet; break if no more data
-          count = 0
-          while count < window_size:
-            if (not send_next_packet()):
-              break
-            count += 1
-
+          send_count = 0
+              
     except (ValueError, KeyError, TypeError):
       log("[recv corrupt packet]")
   else:
     log("[error] timeout")
     sys.exit(-1)
+
+  if send_count < window_size:
+    # Try to send next packet; break if no more data
+    if not send_next_packet():
+      break
+    send_count += 1
 
 sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False}), dest)
 sys.exit(0)
