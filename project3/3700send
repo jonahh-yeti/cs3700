@@ -38,7 +38,7 @@ def send_next_packet(retransmit=False, ret_seq=0):
   global SEQUENCE
   if not retransmit:
     data = sys.stdin.read(DATA_SIZE)
-  if (len(data) > 0):
+  if retransmit or (len(data) > 0):
     # Add data we're sending to unacked data
     if retransmit:
       log("ATTEMPTING RETRANSMISSION")
