@@ -123,20 +123,21 @@ while True:
       log("[error] timeout")
       sys.exit(-1)
   except:
-      # Retransmission logic
-      if time.time() - last_ack > ack_timeout:
-        last_ack = time.time()
-        log("Window timeout, ssthresh: " + str(ssthresh))
-        ssthresh = send_window/2
-        send_window = 1
-      for seq in sent_packets.keys():
-        msg = sent_packets[seq][0]
-        to = sent_packets[seq][1]
-        if time.time() - to > RTO:
-          log("REACHED TIMEOUT")
-          # didn't receive ack within time frame, retransmit
-          if (not send_next_packet(retransmit=True, ret_seq=seq)):
-            break
+    log("error i guess")
+  # Retransmission logic
+  if time.time() - last_ack > ack_timeout:
+    last_ack = time.time()
+      log("Window timeout, ssthresh: " + str(ssthresh))
+    ssthresh = send_window/2
+    send_window = 1
+  for seq in sent_packets.keys():
+    msg = sent_packets[seq][0]
+    to = sent_packets[seq][1]
+    if time.time() - to > RTO:
+      log("REACHED TIMEOUT")
+      # didn't receive ack within time frame, retransmit
+      if (not send_next_packet(retransmit=True, ret_seq=seq)):
+        break
 
 sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False}), dest)
 sys.exit(0)
