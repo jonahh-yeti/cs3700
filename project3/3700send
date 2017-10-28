@@ -125,6 +125,7 @@ while True:
   except:
       # Retransmission logic
       if time.time() - last_ack > ack_timeout:
+        last_ack = time.time()
         log("Window timeout, ssthresh: " + str(ssthresh))
         ssthresh = send_window/2
         send_window = 1
