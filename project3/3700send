@@ -42,7 +42,7 @@ def send_next_packet(retransmit=False, ret_seq=0):
     # Add data we're sending to unacked data
     if retransmit:
       log("ATTEMPTING RETRANSMISSION")
-      msg = sent_packets[ret_seq]
+      msg = sent_packets[ret_seq][0]
     else:
       msg = {"sequence": SEQUENCE, "data": data, "ack": False, "eof": False}
     
