@@ -13,7 +13,7 @@ import json
 
 MSG_SIZE = 1500
 DATA_SIZE = 1000
-TIMEOUT = 30
+TIMEOUT = 0
 SEQUENCE = 0
 
 # Bind to localhost and an ephemeral port
@@ -64,13 +64,16 @@ send_next_packet()
 # Now read in data, send packets
 while True:
   log("ABOUT TO SLEEP, TIME: " + str(time.time()))
-  result = sock.recvfrom(MSG_SIZE)
-  
-  # Retransmission logic
-  if time.time() - t > 0.5:
-    # didn't receive ack within time frame, retransmit
-    if (not send_next_packet(retransmit=True)):
-      break
+  try:
+    result = sock.recvfrom(MSG_SIZE)
+  except:
+      # Retransmission logic
+      if time.time() - t > 0.1:
+        # didn't receive ack within time frame, retransmit
+        if (not send_next_packet(retransmit=True)):
+          break
+      else:
+        continue
       
   # if we receive anything, continue
   if result:
