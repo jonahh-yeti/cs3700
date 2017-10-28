@@ -55,7 +55,7 @@ def send_next_packet(retransmit=False, ret_seq=0):
         SEQUENCE += len(data)
         sent_packets[SEQUENCE] = (msg, time.time())
       
-      log("[send data] " + str(seq) + " (" + str(len(data)) + ")")
+      log("[send data] " + str(msg['sequence']) + " (" + str(len(msg['data'])) + ")")
     return True
   else:
     return False
