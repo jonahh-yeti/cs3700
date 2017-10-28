@@ -31,15 +31,26 @@ UDP_PORT = sock.getsockname()[1]
 log("[bound] " + str(UDP_PORT))
 
 # Our variables
-recv_window = 1
+recv_window = 5
 sequence_number = 0
+buffer = {}
 
 # Now listen for packets
 while True:
+  while len(buffer) > 0:
+    if sequence_number in buffer.keys():
+      log("[recv data] " + str(sequence_number) + " (" + str(len(buffer[sequence_number])) + ") ACCEPTED (in-order)")
+      sys.stdout.write(buffer[sequence_number])
+      del buffer[sequence_number]
+      sequence_number += len(buffer[sequence_number])
+    else:
+      break
   result = sock.recvfrom(MSG_SIZE)
 
   # If nothing is ready, we hit the timeout
   if result:
+    # Check the buffer
+      
     (data, addr) = result
     log(str(result))
     try:
@@ -60,6 +71,9 @@ while True:
           
           # Increment our sequence number
           sequence_number += len(decoded['data'])
+        elif decoded['sequence'] > sequence_number:
+          log("[recv data out of order] adding to buffer " + str(decoded['sequence']))
+          buffer[decoded['sequence']] = decoded['data']
 
       # Send back an ack to the sender
       msg = json.dumps({"ack": sequence_number, "window": recv_window})
