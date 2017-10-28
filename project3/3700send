@@ -29,15 +29,13 @@ sock.settimeout(TIMEOUT)
 # Our variables
 send_window = 1
 t = time.time()
-seq_not_acked = 0
-data_not_acked = ""
 sent_packets = {}
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
 def send_next_packet(retransmit=False, ret_seq=0):
-  global SEQUENCE, data_not_acked, seq_not_acked
+  global SEQUENCE
   data = ""
   seq = 0
   
@@ -103,7 +101,9 @@ while True:
       sys.exit(-1)
   except:
       # Retransmission logic
-      for seq, to, msg in sent_packets:
+      for seq in sent_packets.keys():
+        msg = sent_packets[seq][0]
+        to = sent_packets[seq][1]
         if time.time() - to > 0.3:
           log("REACHED TIMEOUT")
           # didn't receive ack within time frame, retransmit
