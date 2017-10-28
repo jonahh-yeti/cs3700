@@ -13,7 +13,7 @@ import json
 
 MSG_SIZE = 1500
 DATA_SIZE = 1000
-TIMEOUT = 2
+TIMEOUT = 0
 SEQUENCE = 0
 
 # Bind to localhost and an ephemeral port
@@ -21,7 +21,6 @@ IP_PORT = sys.argv[1]
 UDP_IP = IP_PORT[0:IP_PORT.find(":")]
 UDP_PORT = int(IP_PORT[IP_PORT.find(":")+1:])
 dest = (UDP_IP, UDP_PORT)
-rtt_estimate = 0
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
@@ -31,6 +30,8 @@ sock.settimeout(TIMEOUT)
 send_window = 1
 t = time.time()
 sent_packets = {}
+rtt_estimate = 0
+RTO = 2
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
@@ -66,14 +67,14 @@ def send_next_packet(retransmit=False, ret_seq=0):
 send_next_packet()
 
 def rtt_sample(out_time, ack_time):
-  global TIMEOUT, rtt_estimate
+  global RTO, rtt_estimate
   alpha = 0.8
   beta = 1.15
   if rtt_estimate == 0:
     rtt_estimate = ack_time-out_time
   else:
     rtt_estimate = rtt_estimate*alpha + (ack_time-out_time)*(1-alpha)
-  TIMEOUT = rtt_estimate*beta
+  RTO = rtt_estimate*beta
 
 # Now read in data, send packets
 while True:
@@ -114,7 +115,7 @@ while True:
       for seq in sent_packets.keys():
         msg = sent_packets[seq][0]
         to = sent_packets[seq][1]
-        if time.time() - to > TIMEOUT:
+        if time.time() - to > RTO:
           log("REACHED TIMEOUT")
           # didn't receive ack within time frame, retransmit
           t = time.time()
