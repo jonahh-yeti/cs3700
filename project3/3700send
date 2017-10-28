@@ -65,6 +65,12 @@ while True:
   log("ABOUT TO SLEEP")
   result = sock.recvfrom(MSG_SIZE)
   
+  # Retransmission logic
+  if time.time() - t > 0.5:
+    # didn't receive ack within time frame, retransmit
+    if (not send_next_packet(retransmit=True)):
+      break
+      
   # if we receive anything, continue
   if result:
     (data, addr) = result
@@ -83,12 +89,8 @@ while True:
         if (not send_next_packet()):
           break
 
-    except (ValueError, KeyError, TypeError):
+    except (ValueError, KeyError, TypeError) as e:
       log("[recv corrupt packet]")
-  elif time.time() - t > 0.5:
-    # didn't receive ack within time frame, retransmit
-    if (not send_next_packet(retransmit=True)):
-      break
   else:
     log("[error] timeout")
     sys.exit(-1)
