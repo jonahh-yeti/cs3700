@@ -29,6 +29,7 @@ sock.settimeout(TIMEOUT)
 # Our variables
 send_window = 1
 t = time.time()
+seq_not_acked = 0
 data_not_acked = ""
 
 def log(string):
@@ -36,24 +37,30 @@ def log(string):
 
 def send_next_packet(retransmit=False):
   global SEQUENCE, data_not_acked
+  data = ""
+  seq = 0
   
-  # Retransmission logic: if retransmit=True, use data_not_acked instead of stdin
+  # Retransmission logic: if retransmit=True, use data_not_acked instead of stdin and use seq_not_acked
   if retransmit and len(data_not_acked) == DATA_SIZE:
+    log("ATTEMPTING RETRANSMISSION")
     data = data_not_acked
+    seq = seq_not_acked
   else:
     data = sys.stdin.read(DATA_SIZE)
+    seq = SEQUENCE
     
   if (len(data) > 0):
     # Add data we're sending to unacked data
-    data_not_acked = data
-    msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
-    if not retransmit:
-      SEQUENCE += len(data)
+    msg = json.dumps({"sequence": seq, "data": data, "ack": False, "eof": False})
 
     if sock.sendto(msg, dest) < len(msg):
       log("[error] unable to fully send packet")
     else:
-      log("[send data] " + str(SEQUENCE) + " (" + str(len(data)) + ")")
+      if not retransmit:
+        data_not_acked = data
+        seq_not_acked = SEQUENCE
+        SEQUENCE += len(data)
+      log("[send data] " + str(seq) + " (" + str(len(data)) + ")")
     return True
   else:
     return False
