@@ -39,10 +39,11 @@ buffer = {}
 while True:
   while len(buffer) > 0:
     if sequence_number in buffer.keys():
-      log("[recv data] " + str(sequence_number) + " (" + str(len(buffer[sequence_number])) + ") ACCEPTED (in-order)")
-      sys.stdout.write(buffer[sequence_number])
+      data = buffer[sequence_number]
+      log("[recv data] " + str(sequence_number) + " (" + str(len(data)) + ") ACCEPTED (in-order)")
+      sys.stdout.write(data)
       del buffer[sequence_number]
-      sequence_number += len(buffer[sequence_number])
+      sequence_number += len(data)
     else:
       break
   result = sock.recvfrom(MSG_SIZE)
