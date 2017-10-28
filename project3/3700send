@@ -13,7 +13,7 @@ import json
 
 MSG_SIZE = 1500
 DATA_SIZE = 1000
-TIMEOUT = 0
+TIMEOUT = 2
 SEQUENCE = 0
 
 # Bind to localhost and an ephemeral port
@@ -21,6 +21,7 @@ IP_PORT = sys.argv[1]
 UDP_IP = IP_PORT[0:IP_PORT.find(":")]
 UDP_PORT = int(IP_PORT[IP_PORT.find(":")+1:])
 dest = (UDP_IP, UDP_PORT)
+rtt_estimate = 0
 
 # Set up the socket
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
@@ -51,10 +52,10 @@ def send_next_packet(retransmit=False, ret_seq=0):
       log("[error] unable to fully send packet")
     else:
       if retransmit:
-        sent_packets[ret_seq] = (msg, time.time())
+        sent_packets[ret_seq] = (msg, time.time(), False)
       else:
         SEQUENCE += len(data)
-        sent_packets[SEQUENCE] = (msg, time.time())
+        sent_packets[SEQUENCE] = (msg, time.time(), True)
       
       log("[send data] " + str(msg['sequence']) + " (" + str(len(msg['data'])) + ")")
     return True
@@ -63,6 +64,16 @@ def send_next_packet(retransmit=False, ret_seq=0):
 
 # Send first packet
 send_next_packet()
+
+def rtt_sample(out_time, ack_time):
+  global TIMEOUT, rtt_estimate
+  alpha = 0.8
+  beta = 1.15
+  if rtt_estimate == 0:
+    rtt_estimate = ack_time-out_time
+  else:
+    rtt_estimate = rtt_estimate*alpha + (ack_time-out_time)*(1-alpha)
+  TIMEOUT = rtt_estimate*beta
 
 # Now read in data, send packets
 while True:
@@ -87,8 +98,9 @@ while True:
         # Look at the ack received and process it
         if decoded['ack'] in sent_packets.keys():
           # delete the packet from sent_packets
+          if sent_packets[decoded['ack']][2]:
+            rtt_sample(sent_packets[decoded['ack']][1], time.time())
           del sent_packets[decoded['ack']]
-          
           log("[recv ack] " + str(SEQUENCE))
 
       except (ValueError, KeyError, TypeError) as e:
@@ -102,7 +114,7 @@ while True:
       for seq in sent_packets.keys():
         msg = sent_packets[seq][0]
         to = sent_packets[seq][1]
-        if time.time() - to > 0.3:
+        if time.time() - to > TIMEOUT:
           log("REACHED TIMEOUT")
           # didn't receive ack within time frame, retransmit
           t = time.time()
