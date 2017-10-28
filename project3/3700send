@@ -13,7 +13,7 @@ import json
 
 MSG_SIZE = 1500
 DATA_SIZE = 1000
-TIMEOUT = 0
+TIMEOUT = 0.1
 SEQUENCE = 0
 
 # Bind to localhost and an ephemeral port
@@ -99,15 +99,11 @@ while True:
       sys.exit(-1)
   except:
       # Retransmission logic
-      if time.time() - t > 0.1:
-        log("REACHED TIMEOUT")
-        # didn't receive ack within time frame, retransmit
-        if (not send_next_packet(retransmit=True)):
-          t = time.time()
-          break
-      else:
-        continue
-      
+      log("REACHED TIMEOUT")
+      # didn't receive ack within time frame, retransmit
+      if (not send_next_packet(retransmit=True)):
+        t = time.time()
+        break
 
 sock.sendto(json.dumps({"eof": True, "data": "", "sequence": SEQUENCE, "ack": False}), dest)
 sys.exit(0)

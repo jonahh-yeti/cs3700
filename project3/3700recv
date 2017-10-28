@@ -41,7 +41,7 @@ while True:
   # If nothing is ready, we hit the timeout
   if result:
     (data, addr) = result
-
+    log(str(result))
     try:
       decoded = json.loads(data)
 
