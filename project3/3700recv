@@ -74,10 +74,11 @@ while True:
           buffer[decoded['sequence']] = decoded['data']
 
       # Send back an ack to the sender
-      msg = json.dumps({"ack": decoded['sequence'] + len(decoded['data']), "window": recv_window})
-      log("ABOUT TO SEND " + msg)
-      if sock.sendto(msg, addr) < len(msg):
-        log("[error] unable to fully send packet")
+      if decoded['sequence'] < sequence_number or (decoded['sequence'] not in buffer.keys() and decoded['sequence'] != sequence_number):
+        msg = json.dumps({"ack": decoded['sequence'] + len(decoded['data']), "window": recv_window})
+        log("ABOUT TO SEND " + msg)
+        if sock.sendto(msg, addr) < len(msg):
+          log("[error] unable to fully send packet")
 
     except (ValueError, KeyError, TypeError) as e:
       log("[recv corrupt packet]")
