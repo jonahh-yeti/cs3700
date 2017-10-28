@@ -54,7 +54,7 @@ while True:
       if (decoded['data']):
         # If we receive data, we assume it's in-order
         # You will need to do much more here
-        if decoded['sequence'] == sequence_number
+        if decoded['sequence'] == sequence_number:
           log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
           sys.stdout.write(decoded['data'])
           
