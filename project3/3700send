@@ -124,6 +124,9 @@ while True:
       sys.exit(-1)
   except:
       # Retransmission logic
+      if time.time() - last_ack > ack_timeout:
+        ssthresh = send_window/2
+        send_window = 1
       for seq in sent_packets.keys():
         msg = sent_packets[seq][0]
         to = sent_packets[seq][1]
