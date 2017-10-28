@@ -127,7 +127,7 @@ while True:
   # Retransmission logic
   if time.time() - last_ack > ack_timeout:
     last_ack = time.time()
-      log("Window timeout, ssthresh: " + str(ssthresh))
+    log("Window timeout, ssthresh: " + str(ssthresh))
     ssthresh = send_window/2
     send_window = 1
   for seq in sent_packets.keys():
