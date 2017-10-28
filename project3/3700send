@@ -45,7 +45,7 @@ def send_next_packet(retransmit=False):
     
   if (len(data) > 0):
     # Add data we're sending to unacked data
-    data_not_acked += data
+    data_not_acked = data
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
     if not retransmit:
       SEQUENCE += len(data)
@@ -63,11 +63,11 @@ send_next_packet()
 
 # Now read in data, send packets
 while True:
-  log("START OF MAIN LOOP, TIME: " + str(time.time()) + ", SEQUENCE: " + str(SEQUENCE))
   try:
     result = sock.recvfrom(MSG_SIZE)
     # if we receive anything, continue
     if result:
+      log("RECEIVED PACKET")
       (data, addr) = result
       try:
         decoded = json.loads(data)
@@ -93,8 +93,10 @@ while True:
   except:
       # Retransmission logic
       if time.time() - t > 0.1:
+        log("REACHED TIMEOUT")
         # didn't receive ack within time frame, retransmit
         if (not send_next_packet(retransmit=True)):
+          t = time.time()
           break
       else:
         continue
