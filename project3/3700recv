@@ -48,9 +48,7 @@ while True:
   result = sock.recvfrom(MSG_SIZE)
 
   # If nothing is ready, we hit the timeout
-  if result:
-    # Check the buffer
-      
+  if result:      
     (data, addr) = result
     log(str(result))
     try:
