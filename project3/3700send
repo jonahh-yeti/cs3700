@@ -47,7 +47,8 @@ def send_next_packet(retransmit=False):
     # Add data we're sending to unacked data
     data_not_acked += data
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
-    SEQUENCE += len(data)
+    if not retransmit:
+      SEQUENCE += len(data)
 
     if sock.sendto(msg, dest) < len(msg):
       log("[error] unable to fully send packet")
@@ -90,6 +91,7 @@ while True:
           break
 
     except (ValueError, KeyError, TypeError) as e:
+      log(str(e))
       log("[recv corrupt packet]")
   else:
     log("[error] timeout")
