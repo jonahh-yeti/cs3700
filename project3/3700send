@@ -57,7 +57,7 @@ def send_next_packet(retransmit=False, ret_seq=0):
     else:
       if not retransmit:
         SEQUENCE += len(data)
-      sent_packets[seq] = (msg, time.time())
+      sent_packets[seq] = (data, time.time())
       log("[send data] " + str(seq) + " (" + str(len(data)) + ")")
     return True
   else:
