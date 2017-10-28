@@ -36,7 +36,7 @@ def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
 def send_next_packet(retransmit=False):
-  global SEQUENCE, data_not_acked
+  global SEQUENCE, data_not_acked, seq_not_acked
   data = ""
   seq = 0
   
