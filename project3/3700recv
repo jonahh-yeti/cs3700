@@ -54,11 +54,12 @@ while True:
       if (decoded['data']):
         # If we receive data, we assume it's in-order
         # You will need to do much more here
-        log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
-        sys.stdout.write(decoded['data'])
-        
-        # Increment our sequence number
-        sequence_number += len(decoded['data'])
+        if decoded['sequence'] == sequence_number
+          log("[recv data] " + str(decoded['sequence']) + " (" + str(len(decoded['data'])) + ") ACCEPTED (in-order)")
+          sys.stdout.write(decoded['data'])
+          
+          # Increment our sequence number
+          sequence_number += len(decoded['data'])
 
       # Send back an ack to the sender
       msg = json.dumps({"ack": sequence_number, "window": recv_window})
