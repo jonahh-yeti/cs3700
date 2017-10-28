@@ -26,14 +26,26 @@ dest = (UDP_IP, UDP_PORT)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM) 
 sock.settimeout(TIMEOUT)
 
+# Our variables
+send_window = 1
+t = time.time()
+data_not_acked = ""
+
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
-def send_next_packet():
-  global SEQUENCE
-
-  data = sys.stdin.read(DATA_SIZE)
+def send_next_packet(retransmit=False):
+  global SEQUENCE, data_not_acked
+  
+  # Retransmission logic: if retransmit=True, use data_not_acked instead of stdin
+  if retransmit and len(data_not_acked) == DATA_SIZE:
+    data = data_not_acked
+  else:
+    data = sys.stdin.read(DATA_SIZE)
+    
   if (len(data) > 0):
+    # Add data we're sending to unacked data
+    data_not_acked += data
     msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
     SEQUENCE += len(data)
 
@@ -52,7 +64,8 @@ send_next_packet()
 while True:
   log("ABOUT TO SLEEP")
   result = sock.recvfrom(MSG_SIZE)
-
+  
+  # if we receive anything, continue
   if result:
     (data, addr) = result
     try:
@@ -60,13 +73,22 @@ while True:
 
       # If there is an ack, send next packet
       if decoded['ack'] == SEQUENCE:
+        # Reset t and data_not_acked
+        t = time.time()
+        data_not_acked = ""
+        
         log("[recv ack] " + str(SEQUENCE))
 
         # Try to send next packet; break if no more data
         if (not send_next_packet()):
           break
+
     except (ValueError, KeyError, TypeError):
       log("[recv corrupt packet]")
+  elif time.time() - t > 0.5:
+    # didn't receive ack within time frame, retransmit
+    if (not send_next_packet(retransmit=True)):
+      break
   else:
     log("[error] timeout")
     sys.exit(-1)
