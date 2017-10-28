@@ -32,9 +32,9 @@ ssthresh = 32
 last_ack = time.time()
 sent_packets = {}
 rtt_estimate = 0
-RTO = 1
+RTO = 2
 ack_counter = 0
-ack_timeout = 1
+ack_timeout = 2
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
@@ -125,6 +125,7 @@ while True:
   except:
       # Retransmission logic
       if time.time() - last_ack > ack_timeout:
+        log("Window timeout, ssthresh: " + str(ssthresh))
         ssthresh = send_window/2
         send_window = 1
       for seq in sent_packets.keys():
