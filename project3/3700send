@@ -63,7 +63,7 @@ send_next_packet()
 
 # Now read in data, send packets
 while True:
-  log("ABOUT TO SLEEP")
+  log("ABOUT TO SLEEP, TIME: " + str(time.time()))
   result = sock.recvfrom(MSG_SIZE)
   
   # Retransmission logic
