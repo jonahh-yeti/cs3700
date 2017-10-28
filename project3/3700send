@@ -36,13 +36,14 @@ def log(string):
 
 def send_next_packet(retransmit=False, ret_seq=0):
   global SEQUENCE
+  if not retransmit:
+    data = sys.stdin.read(DATA_SIZE)
   if (len(data) > 0):
     # Add data we're sending to unacked data
     if retransmit:
       log("ATTEMPTING RETRANSMISSION")
       msg = sent_packets[ret_seq]
     else:
-      data = sys.stdin.read(DATA_SIZE)
       msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
 
     if sock.sendto(msg, dest) < len(msg):
