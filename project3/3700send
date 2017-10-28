@@ -36,28 +36,24 @@ def log(string):
 
 def send_next_packet(retransmit=False, ret_seq=0):
   global SEQUENCE
-  data = ""
-  seq = 0
-  
-  # Retransmission logic: if retransmit=True, use data_not_acked instead of stdin and use seq_not_acked
-  if retransmit:
-    log("ATTEMPTING RETRANSMISSION")
-    data = sent_packets[ret_seq][0]
-    seq = ret_seq
-  else:
-    data = sys.stdin.read(DATA_SIZE)
-    seq = SEQUENCE
-    
   if (len(data) > 0):
     # Add data we're sending to unacked data
-    msg = json.dumps({"sequence": seq, "data": data, "ack": False, "eof": False})
+    if retransmit:
+      log("ATTEMPTING RETRANSMISSION")
+      msg = sent_packets[ret_seq]
+    else:
+      data = sys.stdin.read(DATA_SIZE)
+      msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
 
     if sock.sendto(msg, dest) < len(msg):
       log("[error] unable to fully send packet")
     else:
-      if not retransmit:
+      if retransmit:
+        sent_packets[ret_seq] = (msg, time.time())
+      else:
         SEQUENCE += len(data)
-      sent_packets[seq] = (data, time.time())
+        sent_packets[SEQUENCE] = (msg, time.time())
+      
       log("[send data] " + str(seq) + " (" + str(len(data)) + ")")
     return True
   else:

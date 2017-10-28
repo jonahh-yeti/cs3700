@@ -81,6 +81,7 @@ while True:
 
     except (ValueError, KeyError, TypeError) as e:
       log("[recv corrupt packet]")
+      log(str(e))
       raise e
   else:
     log("[error] timeout")
