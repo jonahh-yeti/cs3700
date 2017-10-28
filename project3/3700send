@@ -123,7 +123,7 @@ while True:
       log("[error] timeout")
       sys.exit(-1)
   except:
-    log("error i guess")
+    pass
   # Retransmission logic
   if time.time() - last_ack > ack_timeout:
     last_ack = time.time()
