@@ -44,9 +44,10 @@ def send_next_packet(retransmit=False, ret_seq=0):
       log("ATTEMPTING RETRANSMISSION")
       msg = sent_packets[ret_seq]
     else:
-      msg = json.dumps({"sequence": SEQUENCE, "data": data, "ack": False, "eof": False})
-
-    if sock.sendto(msg, dest) < len(msg):
+      msg = {"sequence": SEQUENCE, "data": data, "ack": False, "eof": False}
+    
+    msg_string = json.dumps(msg)
+    if sock.sendto(msg_string, dest) < len(msg_string):
       log("[error] unable to fully send packet")
     else:
       if retransmit:
