@@ -31,7 +31,7 @@ UDP_PORT = sock.getsockname()[1]
 log("[bound] " + str(UDP_PORT))
 
 # Our variables
-recv_window = 10
+recv_window = 64
 sequence_number = 0
 buffer = {}
 

@@ -28,10 +28,13 @@ sock.settimeout(TIMEOUT)
 
 # Our variables
 send_window = 1
-t = time.time()
+ssthresh = 32
+last_ack = time.time()
 sent_packets = {}
 rtt_estimate = 0
-RTO = 2
+RTO = 1
+ack_counter = 0
+ack_timeout = 1
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
@@ -75,6 +78,7 @@ def rtt_sample(out_time, ack_time):
   else:
     rtt_estimate = rtt_estimate*alpha + (ack_time-out_time)*(1-alpha)
   RTO = rtt_estimate*beta
+  ack_timeout = rtt_estimate*2
 
 # Now read in data, send packets
 while True:
@@ -93,7 +97,7 @@ while True:
         decoded = json.loads(data)
         
         # Match our window to advertised window from receiver
-        if decoded['window']:
+        if decoded['window'] and decoded['window'] < send_window:
           send_window = decoded['window']
           
         # Look at the ack received and process it
@@ -102,7 +106,15 @@ while True:
           if sent_packets[decoded['ack']][2]:
             rtt_sample(sent_packets[decoded['ack']][1], time.time())
           del sent_packets[decoded['ack']]
+          if send_window < ssthresh:
+            send_window += 1
+          else:
+            ack_counter += 1
+            if ack_counter == send_window:
+              ack_counter = 0
+              send_window += 1
           log("[recv ack] " + str(SEQUENCE))
+          last_ack = time.time()
 
       except (ValueError, KeyError, TypeError) as e:
         log(str(e))
@@ -118,7 +130,6 @@ while True:
         if time.time() - to > RTO:
           log("REACHED TIMEOUT")
           # didn't receive ack within time frame, retransmit
-          t = time.time()
           if (not send_next_packet(retransmit=True, ret_seq=seq)):
             break
 
