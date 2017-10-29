@@ -40,7 +40,7 @@ def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
 
 def send_next_packet(retransmit=False, ret_seq=0):
-  global SEQUENCE
+  global SEQUENCE, last_ack
   if not retransmit:
     data = sys.stdin.read(DATA_SIZE)
   if retransmit or (len(data) > 0):
@@ -60,7 +60,8 @@ def send_next_packet(retransmit=False, ret_seq=0):
       else:
         SEQUENCE += len(data)
         sent_packets[SEQUENCE] = (msg, time.time(), True)
-      
+      if len(sent_packets) == 1:
+        last_ack = time.time()
       log("[send data] " + str(msg['sequence']) + " (" + str(len(msg['data'])) + ")")
     return True
   else:
