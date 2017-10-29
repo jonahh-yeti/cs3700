@@ -87,3 +87,4 @@ while True:
   else:
     log("[error] timeout")
     sys.exit(-1)
+sys.exit(0)

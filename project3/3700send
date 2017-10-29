@@ -31,7 +31,7 @@ send_window = 1
 ssthresh = 16
 last_ack = time.time()
 sent_packets = {}
-rtt_estimate = 0
+rtt_estimate = 1
 RTO = 2
 ack_counter = 0
 ack_timeout = 2
@@ -73,12 +73,8 @@ def rtt_sample(out_time, ack_time):
   global RTO, rtt_estimate
   alpha = 0.7
   beta = 1.3
-  if rtt_estimate == 0:
-    rtt_estimate = ack_time-out_time
-    RTO = rtt_estimate*2
-  else:
-    rtt_estimate = rtt_estimate*alpha + (ack_time-out_time)*(1-alpha)
-    RTO = rtt_estimate*beta
+  rtt_estimate = rtt_estimate*alpha + (ack_time-out_time)*(1-alpha)
+  RTO = rtt_estimate*beta
   ack_timeout = rtt_estimate*2
 
 # Now read in data, send packets
