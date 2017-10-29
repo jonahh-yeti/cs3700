@@ -75,9 +75,10 @@ def rtt_sample(out_time, ack_time):
   beta = 1.3
   if rtt_estimate == 0:
     rtt_estimate = ack_time-out_time
+    RTO = rtt_estimate*2
   else:
     rtt_estimate = rtt_estimate*alpha + (ack_time-out_time)*(1-alpha)
-  RTO = rtt_estimate*beta
+    RTO = rtt_estimate*beta
   ack_timeout = rtt_estimate*2
 
 # Now read in data, send packets
@@ -85,7 +86,7 @@ while True:
   try:
     if len(sent_packets) < send_window:
         # Try to send next packet; break if no more data
-        if (not send_next_packet()) and len(sent_packets) == 0:
+        if (not send_next_packet()):
           break
           
     result = sock.recvfrom(MSG_SIZE)
