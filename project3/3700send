@@ -132,10 +132,8 @@ while True:
     pass
   # Retransmission logic
   if time.time() - last_ack > ack_timeout:
-    log("ACK_TIMEOUT IN BLOCK: " + str(ack_timeout))
     if (eof_sent):
       sys.exit(0)
-    log("EOF_SENT STATUS: " + str(eof_sent))
     last_ack = time.time()
     log("Window timeout, ssthresh: " + str(ssthresh))
     ssthresh = max(ssthresh//2, 1)
@@ -147,6 +145,7 @@ while True:
     if time.time() - to > (RTO * send_window):
       log("REACHED TIMEOUT")
       log("ACK_TIMEOUT: " + str(ack_timeout))
+      log("EOF_SENT STATUS: " + str(eof_sent))
       # didn't receive ack within time frame, retransmit
       if (not send_next_packet(retransmit=True, ret_seq=seq)):
         continue
