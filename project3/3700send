@@ -136,7 +136,7 @@ while True:
       sys.exit(0)
     last_ack = time.time()
     log("Window timeout, ssthresh: " + str(ssthresh))
-    ssthresh = max(send_window//2, 1)
+    ssthresh = max(ssthresh//2, 1)
     send_window = 1
     
   for seq in sent_packets.keys():
