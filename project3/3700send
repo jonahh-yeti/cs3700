@@ -141,7 +141,7 @@ while True:
     to = sent_packets[seq][1]
     if time.time() - to > (RTO * send_window):
       log("REACHED TIMEOUT")
-      rtt_sample((time.time() - (rtt_estimate * 1.5)) ,time.time())
+      #rtt_sample((time.time() - (rtt_estimate * 1.5)) ,time.time())
       # didn't receive ack within time frame, retransmit
       if (not send_next_packet(retransmit=True, ret_seq=seq)):
         continue
