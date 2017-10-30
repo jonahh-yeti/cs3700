@@ -131,6 +131,7 @@ while True:
   except:
     pass
   # Retransmission logic
+  log("ACK_TIMEOUT: " + str(ack_timeout))
   if time.time() - last_ack > ack_timeout:
     if eof_sent:
       sys.exit(0)
