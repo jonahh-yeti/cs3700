@@ -86,6 +86,7 @@ while True:
       # Try to send next packet; break if no more data
       if (not send_next_packet()) and len(sent_packets) == 0:
         if (not eof_sent):
+          log("SENDING EOF")
           msg = {"sequence": SEQUENCE, "data": "", "ack": False, "eof": True}
           sent_packets[SEQUENCE] = (msg, time.time(), True)
           sock.sendto(json.dumps(msg), dest)
