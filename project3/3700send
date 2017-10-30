@@ -134,7 +134,7 @@ while True:
     pass
   # Retransmission logic
   if time.time() - last_ack > ack_timeout:
-    if (eof_sent):
+    if (eof_sent and time.time() - last_ack > 1):
       log("SAFETY QUIT")
       sys.exit(0)
     last_ack = time.time()
