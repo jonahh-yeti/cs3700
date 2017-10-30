@@ -46,6 +46,7 @@ while True:
       sequence_number += len(data)
     else:
       break
+	
   result = sock.recvfrom(MSG_SIZE)
 
   # If nothing is ready, we hit the timeout
@@ -87,4 +88,5 @@ while True:
   else:
     log("[error] timeout")
     sys.exit(-1)
+	 
 sys.exit(0)
