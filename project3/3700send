@@ -133,9 +133,9 @@ while True:
   # Retransmission logic
   if time.time() - last_ack > ack_timeout:
     log("ACK_TIMEOUT: " + str(ack_timeout))
-    log(str(eof_sent))
     if (eof_sent):
       sys.exit(0)
+    log(str(eof_sent))
     last_ack = time.time()
     log("Window timeout, ssthresh: " + str(ssthresh))
     ssthresh = max(ssthresh//2, 1)
