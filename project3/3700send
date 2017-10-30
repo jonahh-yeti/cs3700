@@ -32,9 +32,9 @@ ssthresh = 16
 last_ack = time.time()
 sent_packets = {}
 rtt_estimate = 1
-RTO = 2
+RTO = 1
 ack_counter = 0
-ack_timeout = 2
+ack_timeout = 1
 eof_sent = False
 
 def log(string):
@@ -141,7 +141,6 @@ while True:
     to = sent_packets[seq][1]
     if time.time() - to > (RTO * send_window):
       log("REACHED TIMEOUT")
-      #rtt_sample((time.time() - (rtt_estimate * 1.5)) ,time.time())
       # didn't receive ack within time frame, retransmit
       if (not send_next_packet(retransmit=True, ret_seq=seq)):
         continue
