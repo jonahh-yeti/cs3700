@@ -111,8 +111,9 @@ while True:
         # Look at the ack received and process it
         if decoded['ack'] in sent_packets.keys():
           # delete the packet from sent_packets
-          if sent_packets[decoded['ack']][2]:
-            rtt_sample(sent_packets[decoded['ack']][1], time.time())
+          #if sent_packets[decoded['ack']][2]:
+          rtt_sample(sent_packets[decoded['ack']][1], time.time())
+          #elif rtt_estimate - time.time() - sent_packets[decoded['ack']][1] > (rtt_estimate / 2)  
           del sent_packets[decoded['ack']]
           if send_window < ssthresh:
             send_window += 1
@@ -133,10 +134,11 @@ while True:
   except:
     pass
   # Retransmission logic
-  if time.time() - last_ack > ack_timeout:
-    if (eof_sent and time.time() - last_ack > 1):
+  if (eof_sent and time.time() - last_ack > 1):
       log("SAFETY QUIT")
       sys.exit(0)
+  
+  if time.time() - last_ack > ack_timeout:
     last_ack = time.time()
     log("Window timeout, ssthresh: " + str(ssthresh))
     ssthresh = max(ssthresh//2, 1)
