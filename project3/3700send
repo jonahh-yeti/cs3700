@@ -83,15 +83,15 @@ def rtt_sample(out_time, ack_time):
 while True:
   try:
     if len(sent_packets) < send_window:
-        # Try to send next packet; break if no more data
-        if (not send_next_packet()) and len(sent_packets) == 0:
-		  if (not eof_sent):
-		    msg = {"sequence": SEQUENCE, "data": "", "ack": False, "eof": True}
-			sent_packets[SEQUENCE] = (msg, time.time(), True)
-		    sock.sendto(json.dumps(msg), dest)
-			eof_sent = True;
-		  else:
-		    break
+      # Try to send next packet; break if no more data
+      if (not send_next_packet()) and len(sent_packets) == 0:
+        if (not eof_sent):
+          msg = {"sequence": SEQUENCE, "data": "", "ack": False, "eof": True}
+          sent_packets[SEQUENCE] = (msg, time.time(), True)
+          sock.sendto(json.dumps(msg), dest)
+          eof_sent = True;
+        else:
+          break
           
     result = sock.recvfrom(MSG_SIZE)
     # if we receive anything, continue
