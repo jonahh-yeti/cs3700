@@ -61,7 +61,7 @@ def send_next_packet(retransmit=False, ret_seq=0):
       else:
         SEQUENCE += len(data)
         sent_packets[SEQUENCE] = (msg, time.time(), True)
-      if len(sent_packets) == 1:
+      if len(sent_packets) == 1 and not eof_sent:
         last_ack = time.time()
       log("[send data] " + str(msg['sequence']) + " (" + str(len(msg['data'])) + ")")
     return True
