@@ -61,7 +61,7 @@ while True:
         log("ABOUT TO SEND EOF ACK " + msg)
         if sock.sendto(msg, addr) < len(msg):
           log("[error] unable to fully send packet")
-        else 
+        else: 
           log("[completed]")
           sys.exit(0)
 
