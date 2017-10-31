@@ -36,7 +36,6 @@ RTO = 2
 ack_counter = 0
 ack_timeout = 1
 eof_sent = False
-scale_factor = 1
 
 def log(string):
   sys.stderr.write(datetime.datetime.now().strftime("%H:%M:%S.%f") + " " + string + "\n")
@@ -58,10 +57,10 @@ def send_next_packet(retransmit=False, ret_seq=0):
       log("[error] unable to fully send packet")
     else:
       if retransmit:
-        sent_packets[ret_seq] = (msg, time.time(), False)
+        sent_packets[ret_seq] = (msg, time.time())
       else:
         SEQUENCE += len(data)
-        sent_packets[SEQUENCE] = (msg, time.time(), True)
+        sent_packets[SEQUENCE] = (msg, time.time())
       if len(sent_packets) == 1 and not eof_sent:
         last_ack = time.time()
       log("[send data] " + str(msg['sequence']) + " (" + str(len(msg['data'])) + ")")
