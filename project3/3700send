@@ -141,8 +141,8 @@ while True:
   if time.time() - last_ack > ack_timeout:
     last_ack = time.time()
     log("Window timeout, ssthresh: " + str(ssthresh))
-    ssthresh = max(ssthresh//2, 1)
-    send_window = 1
+    ssthresh = max(send_window//2, 1)
+    send_window = send_window//4
     
   for seq in sent_packets.keys():
     msg = sent_packets[seq][0]
