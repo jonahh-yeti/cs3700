@@ -1,0 +1,33 @@
+README for team husson-reiter project3, Simple Transport Protocol
+
+High Level Approach
+Our protocol is based on variable window size, sliding window behavior, sending time, and out of order acking.
+We start with a window size of 1 and a slow start threshold (ssthresh) of 32. During slow start,
+we extend the window size by 1 for every received ack. Once we reach ssthresh, we add 1 to our window
+size every time a complete window is acked. We also have a sliding window, so whenever an ack is
+received a new packet is sent. We sample round trip time (rtt) every time we receive an ack, and we
+scale up rtt whenever a retransmission is needed. This allows our round trip time to become sufficiently
+large for high latency networks, while also being able to adjust to faster networks.  
+
+Every packet on the sender side has a timeout based on rtt, where if we don't receive an ack in that
+time we retransmit. We also have a larger ack timeout, where if we don't receive an ack at all, we
+assume the network has too much load, and we restart slow start by setting the window size to one
+and the ssthresh to half of what it was before.
+
+We buffer every message sent from the sender until it is acked. The receiver also buffers every message
+it recieves, and prints a buffered message if it is the next one to ensure data match. This allows us to
+send and ack any packet, even if it's out of order. 
+
+Challenges
+The biggest challenges we faced were sending a large file of a slow network, and very lossy networks.
+Originally lossy networks were fine because out retransmit logic was fast. However, in order to send a large
+file over a slow network we had to make out timeouts longer to accomodate 
+
+How we Tested
+We tested at first by just running our code under conditions for what we were testing. We starting by sending
+more packets faster, so we tested using larger files and slower networks. Once we had a good concept of a 
+window, we created logic for acking multiple packets, even if they're out of order. To test this, we ran tests
+using environments where packets were delayed or dropped. Once we achieved this, we started using the test script
+and looked to fix any tests that failed. Once we believed we solved the issue, we would run the test script again to make
+sure nothing else that previously passed failed now due to our changes. Once we got all tests to pass consistently,
+we focused on performance, trying to send fewer packets in less time.
