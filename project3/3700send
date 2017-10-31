@@ -32,7 +32,7 @@ ssthresh = 32
 last_ack = time.time()
 sent_packets = {}
 rtt_estimate = 0
-RTO = 1
+RTO = 2
 ack_counter = 0
 ack_timeout = 1
 eof_sent = False
@@ -73,8 +73,8 @@ send_next_packet()
 
 def rtt_sample(out_time, ack_time):
   global RTO, rtt_estimate, ack_timeout
-  alpha = 0.7
-  beta = 1.3
+  alpha = 0.75
+  beta = 1.25
   if (rtt_estimate == 0):
     rtt_estimate = ack_time-out_time
   rtt_estimate = rtt_estimate*alpha + (ack_time-out_time)*(1-alpha)
@@ -84,7 +84,6 @@ def rtt_sample(out_time, ack_time):
 # Now read in data, send packets
 while True:
   try:
-          
     result = sock.recvfrom(MSG_SIZE)
     # if we receive anything, continue
     if result:
@@ -149,7 +148,7 @@ while True:
     to = sent_packets[seq][1]
     if time.time() - to > (RTO * send_window):
       log("REACHED TIMEOUT")
-      rtt_sample((time.time() - (rtt_estimate * 1.5)), time.time())
+      rtt_sample((time.time() - (rtt_estimate * 1.25)), time.time())
       # didn't receive ack within time frame, retransmit
       if (not send_next_packet(retransmit=True, ret_seq=seq)):
         continue
