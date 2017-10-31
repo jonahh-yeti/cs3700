@@ -44,7 +44,7 @@ while True:
       del buffer[sequence_number]
       sequence_number += len(data)
     else:
-      continue
+      break
 	
   result = sock.recvfrom(MSG_SIZE)
 
