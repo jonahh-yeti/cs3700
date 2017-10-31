@@ -31,7 +31,6 @@ UDP_PORT = sock.getsockname()[1]
 log("[bound] " + str(UDP_PORT))
 
 # Our variables
-recv_window = 64
 sequence_number = 0
 buffer = {}
 
@@ -57,7 +56,7 @@ while True:
 
       # If the EOF flag is set, exit
       if (decoded['eof']):
-        msg = json.dumps({"ack": decoded['sequence'] + len(decoded['data']), "window": recv_window})
+        msg = json.dumps({"ack": decoded['sequence'] + len(decoded['data'])})
         log("ABOUT TO SEND EOF ACK " + msg)
         if sock.sendto(msg, addr) < len(msg):
           log("[error] unable to fully send packet")
@@ -81,7 +80,7 @@ while True:
 
       # Send back an ack to the sender
       if decoded['sequence'] < sequence_number or (decoded['sequence'] not in buffer.keys() and decoded['sequence'] != sequence_number):
-        msg = json.dumps({"ack": decoded['sequence'] + len(decoded['data']), "window": recv_window})
+        msg = json.dumps({"ack": decoded['sequence'] + len(decoded['data'])})
         log("ABOUT TO SEND " + msg)
         if sock.sendto(msg, addr) < len(msg):
           log("[error] unable to fully send packet")

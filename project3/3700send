@@ -92,17 +92,11 @@ while True:
       (data, addr) = result
       try:
         decoded = json.loads(data)
-        
-        # Match our window to advertised window from receiver
-        if decoded['window'] and decoded['window'] < send_window:
-          send_window = decoded['window']
           
         # Look at the ack received and process it
         if decoded['ack'] in sent_packets.keys():
           # delete the packet from sent_packets
-          #if sent_packets[decoded['ack']][2]:
           rtt_sample(sent_packets[decoded['ack']][1], time.time())
-          #elif rtt_estimate - time.time() - sent_packets[decoded['ack']][1] > (rtt_estimate / 2)  
           del sent_packets[decoded['ack']]
           if send_window < ssthresh:
             send_window += 1
