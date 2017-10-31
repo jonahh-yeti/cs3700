@@ -106,7 +106,7 @@ while True:
               ack_counter = 0
               send_window += 1
               
-          #send_window = min(send_window, 128)
+          send_window = min(send_window, 128)
           log("[recv ack] " + str(SEQUENCE))
           last_ack = time.time()
 
