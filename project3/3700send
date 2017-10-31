@@ -120,8 +120,12 @@ while True:
     else:
       log("[error] timeout")
       sys.exit(-1)
-      
-    if len(sent_packets) < send_window:
+          
+  except:
+    pass
+    
+  # transmit more packets if our window allows it
+  if len(sent_packets) < send_window:
       # Try to send next packet; break if no more data
       if (not send_next_packet()) and len(sent_packets) == 0:
         if (not eof_sent):
@@ -133,8 +137,6 @@ while True:
         else:
           break
           
-  except:
-    pass
   # Retransmission logic
   if (eof_sent and time.time() - last_ack > 1):
       log("SAFETY QUIT")
