@@ -105,6 +105,9 @@ while True:
             if ack_counter == send_window:
               ack_counter = 0
               send_window += 1
+              
+          if (send_window > 64):
+            send_window = 64
           log("[recv ack] " + str(SEQUENCE))
           last_ack = time.time()
 
