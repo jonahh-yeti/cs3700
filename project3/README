@@ -21,10 +21,16 @@ send and ack any packet, even if it's out of order.
 Challenges
 The biggest challenges we faced were sending a large file of a slow network, and very lossy networks.
 Originally lossy networks were fine because out retransmit logic was fast. However, in order to send a large
-file over a slow network we had to make out timeouts longer to accomodate 
+file over a slow network we had to make out timeouts longer to accomodate a full packet transfer and acknowledgement.
+We found that increasing the timeout was good for high latency networks, but bad for lossy networks because waiting
+for a long timeout whenever a packet was dropped would waste a lot of time, and sometimes we would run out of time when
+testing. We solved this by creating a timeout that scaled up on a retransmission, and starting with a long timeout.
+This meant that a lossy network would only need to wait a long time for the first few dropped packets before an rtt
+was established, and after that all subsequent timeout would be short. And a high latency network would have enough time
+to tranfer data, and the rtt would shrink until appropriate.
 
 How we Tested
-We tested at first by just running our code under conditions for what we were testing. We starting by sending
+We tested at first by just running our code under conditions for what we were solving. We starting by sending
 more packets faster, so we tested using larger files and slower networks. Once we had a good concept of a 
 window, we created logic for acking multiple packets, even if they're out of order. To test this, we ran tests
 using environments where packets were delayed or dropped. Once we achieved this, we started using the test script
