@@ -16,33 +16,31 @@ pages_to_visit = []
 
 # create a subclass and override the handler methods
 class MyHTMLParser(HTMLParser):
-    def handle_starttag(self, tag, attrs):
-        if tag == 'input':
-            print attrs
-            newkeys = [i[0] for i in attrs]
-            print newkeys
-            try:
-                indexOfName = newkeys.index('name')
-                if indexOfName > 0:
-                    if attrs[indexOfName][1] == 'csrfmiddlewaretoken':
-                        token = attrs[newkeys.index('value')][1]
-                        self.csrf = token
-            except ValueError:
-                print "whoops not found"
-        elif tag == 'a':
-          newkeys = [i[0] for i in attrs]
-          try:
-            hrefIndex = newkeys.index('href')
-            if hrefIndex > 0:
-              pages_to_visit.append(attrs[hrefIndex][1])
-          except Error as E:
-            pass
+  def handle_starttag(self, tag, attrs):
+    if tag == 'input':
+      newkeys = [i[0] for i in attrs]
+      try:
+        indexOfName = newkeys.index('name')
+        if indexOfName > 0:
+          if attrs[indexOfName][1] == 'csrfmiddlewaretoken':
+            token = attrs[newkeys.index('value')][1]
+            self.csrf = token
+      except ValueError:
+        pass
+    elif tag == 'a':
+      newkeys = [i[0] for i in attrs]
+      try:
+        hrefIndex = newkeys.index('href')
+        if hrefIndex > 0:
+          pages_to_visit.append(attrs[hrefIndex][1])
+      except Error as E:
+        pass
 
-    def handle_endtag(self, tag):
-        print "Encountered an end tag :", tag
+  def handle_endtag(self, tag):
+    pass
 
-    def handle_data(self, data):
-        print "Encountered some data  :", data
+  def handle_data(self, data):
+    pass
 
 
 # instantiate the parser and fed it some HTML
@@ -58,16 +56,15 @@ CSRF = ""
 def spider():
   global ROOT, PORT
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-  s.settimeout(0.30)
   s.connect((ROOT, PORT))
   visited = []
   destinations = []
-  
+
   destinations = logon("http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/", s)
-  
+
   s.shutdown(1)
   s.close()
-  
+
 
 def request(type, url, contentType = None, contentLength = None, cookies = {}, data = {}):
   r = "%s %s HTTP/1.1\r\nhost: fring.ccs.neu.edu\r\n" % (type, url)
@@ -82,10 +79,10 @@ def request(type, url, contentType = None, contentLength = None, cookies = {}, d
     r = r[:-2] + "\r\n"
   if data:
     r = r + "\r\n" + data
-  r = r + "\r\n\r\n" 
+  r = r + "\r\n\r\n"
   print r
   return r
-  
+
 def logon(url, s):
   global ROOT, CSRF
   url = urlparse.urlparse(url)
@@ -102,7 +99,7 @@ def logon(url, s):
   data = s.recv(1000000)
   print data
   return handle(data, s)
-  
+
 def crawl(url, s, abs=False):
   global ROOT, CSRF
   url = urlparse.urlparse(url)
@@ -119,21 +116,23 @@ def get_cookies(data):
   matches = re.search(my_regex, data)
   if matches:
     session = matches.group(1)
-  CSRF = parser.csrf
-  
+  if parser.csrf:
+    CSRF = parser.csrf
+
 def handle(data, s):
   my_regex = r"HTTP/1\.1 (\d*)"
   matches = re.search(my_regex, data)
-  if matches:
-    code = matches.group(1)
+  code = matches.group(1)
+
   if code == '302':
     return handle_found(data, s)
+  elif code == "200":
+    print data
 
-    
+
 def handle_found(data, s):
-  my_regex = r"Location: (http://fring\.ccs\.neu\.edu.*)"
+  my_regex = r"Location: (http://fring\.ccs\.neu\.edu.*)\r"
   matches = re.search(my_regex, data)
-  print matches.group(1)
   crawl(matches.group(1), s)
 
 spider()
