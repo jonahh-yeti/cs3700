@@ -97,6 +97,7 @@ def logon(url, s):
   req = request("POST", path, 'application/x-www-form-urlencoded', str(len(login_data)), cookies, login_data)
   s.send(req)
   data = s.recv(1000000)
+  get_cookies(data)
   print data
   return handle(data, s)
 
@@ -107,6 +108,7 @@ def crawl(url, s, abs=False):
   req = request('GET', url.path, cookies=cookies)
   s.send(req)
   data = s.recv(1000000)
+  get_cookies(data)
   print data
   return handle(data, s)
 
