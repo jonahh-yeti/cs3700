@@ -7,6 +7,12 @@ import re
 import os
 from HTMLParser import HTMLParser
 
+PORT = 80
+ROOT = "fring.ccs.neu.edu"
+CSRF = ""
+session = ""
+pages_visited = []
+pages_to_visit = []
 
 # create a subclass and override the handler methods
 class MyHTMLParser(HTMLParser):
@@ -20,9 +26,17 @@ class MyHTMLParser(HTMLParser):
                 if indexOfName > 0:
                     if attrs[indexOfName][1] == 'csrfmiddlewaretoken':
                         token = attrs[newkeys.index('value')][1]
-                        print token
+                        self.csrf = token
             except ValueError:
                 print "whoops not found"
+        elif tag == 'a':
+          newkeys = [i[0] for i in attrs]
+          try:
+            hrefIndex = newkeys.index('href')
+            if hrefIndex > 0:
+              pages_to_visit.append(attrs[hrefIndex][1])
+          except Error as E:
+            pass
 
     def handle_endtag(self, tag):
         print "Encountered an end tag :", tag
@@ -38,56 +52,88 @@ socket.setdefaulttimeout = 0.50
 os.environ['no_proxy'] = '127.0.0.1,localhost'
 linkRegex = re.compile('<a\s*href=[\'|"](.*?)[\'"].*?>')
 CRLF = "\r\n\r\n"
+NL = "\r\n"
+CSRF = ""
 
+def spider():
+  global ROOT, PORT
+  s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s.settimeout(0.30)
+  s.connect((ROOT, PORT))
+  visited = []
+  destinations = []
+  
+  destinations = logon("http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/", s)
+  
+  s.shutdown(1)
+  s.close()
+  
 
+def request(type, url, contentType = None, contentLength = None, cookies = {}, data = {}):
+  r = "%s %s HTTP/1.1\r\nhost: fring.ccs.neu.edu\r\n" % (type, url)
+  if contentType:
+    r = r + "Content-Type: " + contentType + "\r\n"
+  if contentLength:
+    r = r + "Content-Length: " + str(contentLength) + "\r\n"
+  if not len(cookies.keys()) == 0:
+    r = r + "Cookie: "
+    for key in cookies.keys():
+      r = r + key + "=" + cookies[key] + "; "
+    r = r[:-2] + "\r\n"
+  if data:
+    r = r + "\r\n" + data
+  r = r + "\r\n\r\n" 
+  print r
+  return r
+  
+def logon(url, s):
+  global ROOT, CSRF
+  url = urlparse.urlparse(url)
+  path = url.path
+  req = request("GET", path)
+  s.send(req)
+  data = s.recv(1000000)
+  parser.feed(data)
+  get_cookies(data)
+  cookies = {'csrftoken': CSRF, 'sessionid': str(session)}
+  login_data = 'csrfmiddlewaretoken='+CSRF+'&next=%2Ffakebook%2F&username=1732187&password=8ZUTZ78U'
+  req = request("POST", path, 'application/x-www-form-urlencoded', str(len(login_data)), cookies, login_data)
+  s.send(req)
+  data = s.recv(1000000)
+  print data
+  return handle(data, s)
+  
+def crawl(url, s, abs=False):
+  global ROOT, CSRF
+  url = urlparse.urlparse(url)
+  cookies = {'csrftoken': CSRF, 'sessionid': str(session)}
+  req = request('GET', url.path, cookies=cookies)
+  s.send(req)
+  data = s.recv(1000000)
+  print data
+  return handle(data, s)
 
-def GET(url):
-    url = urlparse.urlparse(url)
-    print url
-    path = url.path
-    if path == "":
-        path = "/"
-    HOST = url.netloc  # The remote host
-    PORT = 80          # The same port as used by the server
-    # create an INET, STREAMing socket
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    """
-    ***********************************************************************************
-    * Note that the connect() operation is subject to the timeout setting,
-    * and in general it is recommended to call settimeout() before calling connect()
-    * or pass a timeout parameter to create_connection().
-    * The system network stack may return a connection timeout error of its own
-    * regardless of any Python socket timeout setting.
-    ***********************************************************************************
-    """
-    s.settimeout(0.30)
-    """
-    **************************************************************************************
-    * Avoid socket.error: [Errno 98] Address already in use exception
-    * The SO_REUSEADDR flag tells the kernel to reuse a local socket in TIME_WAIT state,
-    * without waiting for its natural timeout to expire.
-    **************************************************************************************
-    """
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    #s.setblocking(0)
-    s.connect((HOST, PORT))
-    message = "GET %s?%s HTTP/1.1%shost: %s%s" % (path, url.query, '\r\n', HOST, CRLF)
-    print url.path
-    print url.params
-    print url.query
-    print url.fragment
-    print message
-    s.send(message)
-    data = (s.recv(1000000))
-    print data
+def get_cookies(data):
+  global CSRF, session
+  my_regex = r"sessionid=(.*); e"
+  matches = re.search(my_regex, data)
+  if matches:
+    session = matches.group(1)
+  CSRF = parser.csrf
+  
+def handle(data, s):
+  my_regex = r"HTTP/1\.1 (\d*)"
+  matches = re.search(my_regex, data)
+  if matches:
+    code = matches.group(1)
+  if code == '302':
+    return handle_found(data, s)
 
-    parser.feed(data)
+    
+def handle_found(data, s):
+  my_regex = r"Location: (http://fring\.ccs\.neu\.edu.*)"
+  matches = re.search(my_regex, data)
+  print matches.group(1)
+  crawl(matches.group(1), s)
 
-
-    # https://docs.python.org/2/howto/sockets.html#disconnecting
-    s.shutdown(1)
-    s.close()
-    print 'Received', repr(data)
-
-
-GET('http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/')
+spider()
