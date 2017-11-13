@@ -4,9 +4,13 @@
 import socket
 import urlparse
 import re
+import sys
+import time
 from HTMLParser import HTMLParser
 
 # global variables
+USERNAME = sys.argv[1]
+PASSWORD = sys.argv[2]
 PORT = 80
 ROOT = "fring.ccs.neu.edu"
 CSRF = ""
@@ -99,6 +103,7 @@ def spider():
         continue
     count += 1
     # crawl the current page
+    print 'CRAWLIN'
     crawl('http://fring.ccs.neu.edu' + pages_to_visit[0], s)
 
   # print the flags after the loop completes
@@ -136,7 +141,7 @@ def request(type, url, contentType=None, contentLength=None, cookies={}, data={}
 
 # log on to the site
 def logon(url, s):
-  global ROOT, CSRF
+  global ROOT, CSRF, USERNAME, PASSWORD
 
   # parse the url to get the path
   url = urlparse.urlparse(url)
@@ -152,10 +157,11 @@ def logon(url, s):
   cookies = {'csrftoken': CSRF, 'sessionid': str(session)}
 
   # set the form data body of our login POST request
-  login_data = 'csrfmiddlewaretoken=' + CSRF + '&next=%2Ffakebook%2F&username=1732187&password=8ZUTZ78U'
+  login_data = 'csrfmiddlewaretoken=' + CSRF + '&next=%2Ffakebook%2F&username=' + USERNAME + '&password=' + PASSWORD
   # pass all of the arguments to request to build our POST request, send it, receive the response, and set the cookies
   req = request("POST", path, 'application/x-www-form-urlencoded', str(len(login_data)), cookies, login_data)
   s.send(req)
+  time.sleep(1)
   data = s.recv(1000000)
   get_cookies(data)
 
