@@ -29,6 +29,7 @@ class MyHTMLParser(HTMLParser):
     # initialize the readData variable to false so we don't read the data of all tags
     self.readData = False
 
+  # Parse data within start tags in raw HTML
   def handle_starttag(self, tag, attrs):
     global pages_to_visit, pages_visited, found_headers
     # if we encounter an <a> tag, add its href to the work queue
@@ -61,6 +62,7 @@ class MyHTMLParser(HTMLParser):
       except:
         pass
 
+  # Pull flag out and store it
   def handle_data(self, data):
     global found_headers
     # if self.readData is true, extract the flag and add it to our list
@@ -168,31 +170,34 @@ def logon(url, s):
   # delegate the response to the handler
   return handle(data, s, path)
 
-
+# Crawl to a new page
 def crawl(url, s):
   global ROOT, CSRF
   url = urlparse.urlparse(url)
   cookies = {'csrftoken': CSRF, 'sessionid': str(session)}
+  # Build request string to send, includes cookies
   req = request('GET', url.path, cookies=cookies)
   s.send(req)
   data = s.recv(1000000)
+  # Update cookies we're sending based on response from page
   get_cookies(data)
   return handle(data, s, url.path)
 
-
+# Look at HTTP response and update our session id and CSRF if needed
 def get_cookies(data):
   global CSRF, session
+  # Update session id
   session_regex = r"sessionid=(.*); e"
   session_matches = re.search(session_regex, data)
   if session_matches:
     session = session_matches.group(1)
-
+  # Update CSRF
   csrf_regex = r"csrftoken=(.*); e"
   csrf_matches = re.search(csrf_regex, data)
   if csrf_matches:
     CSRF = csrf_matches.group(1)
 
-
+# Handle HTML data returned from HTTP request
 def handle(data, s, path):
   my_regex = r"HTTP/1\.1 (\d*)"
   matches = re.search(my_regex, data)
@@ -209,7 +214,7 @@ def handle(data, s, path):
   except AttributeError as E:
     pass
 
-
+# Handler for 403 & 404 codes
 def abort_request(data, s, path):
   global pages_visited, pages_to_visit
   pages_visited.append(path)
@@ -218,11 +223,11 @@ def abort_request(data, s, path):
   except:
     pass
 
-
+# Handler for 500 codes
 def handle_error(data, s, path):
   crawl('http://fring.ccs.neu.edu' + path, s)
 
-
+# Handler for 200 codes
 def handle_ok(data, s, path):
   pages_visited.append(path)
   try:
@@ -231,7 +236,7 @@ def handle_ok(data, s, path):
     pass
   parser.feed(data)
 
-
+# Handler for 301 & 302 codes
 def handle_found(data, s, path):
   global pages_visited, pages_to_visit
   pages_visited.append(path)
@@ -243,5 +248,5 @@ def handle_found(data, s, path):
   matches = re.search(my_regex, data)
   crawl(matches.group(1), s)
 
-
+# Start crawling
 spider()
