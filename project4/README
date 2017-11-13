@@ -1,0 +1,33 @@
+High Level Approach
+Our high level approach to how the code should work was pretty basic, and defined by the project.
+We wanted our web crawler to log onto the site, and then scan the page looking for all <a> and <h2>
+tags, looking for new pages to visit or the secret flags we were searching for. We added any link in
+an href to a work queue if it wasn't in a list of pages we've already visited, and then looped through
+our work queue.
+
+When it came to implementing the solution, we approached it by setting functionality goals and meeting
+them one at a time. We started by just making requests to the website, and getting a response. After that
+we wanted to log in and access the homepage. This was one of the more difficult parts of the project. Once
+that was done, we had to handle all of the different status codes by either aborting the request, re-sending
+the request, sending a new request, or scanning the page. The last step was to then crawl pages until
+our work queue was empty, or we had found 5 distinct secret flags.
+
+Challenges We Faced
+The largest challenge we faced was logging into the site. Due to the hints provided in the assignment
+we knew to inspect the page and found the csrf token. It took us some time to correctly send a POST request,
+but even after that we had another issue. We thought sending the csrf token as a header would be enough. After
+reading about html forms, we then realized that we needed to provide the csrfmiddlewaretoken and next fields
+in the body of our POST request as well.
+
+After this everything was fairly straight forward. We got caught on some minor aspects, such as not filtering
+out paths that were not on the target machine, and accidentally counting duplicate secret flags that we found,
+but these were simply to resolve.
+
+How We Tested
+Our first test was always to run the script while having an idea of our expected output. In the beginning, we
+were mostly printing http responses and making sure we were getting 302's or 200's to confirm that our requests
+were well formed. We then progressed to expecting html of pages on the site, and then we compiled and printed
+lists of paths that our crawler visited while running. Finally, we expected the output to to be the five secret
+flags. If the output wasn't matching our expectations, we would usually add more print statements to get a more
+complete view of the state of our script. If this proved ineffective, we used a debugger to look even more closely,
+and this would be able to resolve the problem.

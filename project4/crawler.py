@@ -1,12 +1,12 @@
-# PROJ 4 CODE
 # !/usr/bin/python
 
+# imports
 import socket
 import urlparse
 import re
-import os
 from HTMLParser import HTMLParser
 
+# global variables
 PORT = 80
 ROOT = "fring.ccs.neu.edu"
 CSRF = ""
@@ -14,17 +14,22 @@ session = ""
 pages_visited = []
 pages_to_visit = []
 found_headers = []
+socket.setdefaulttimeout = 10
+CRLF = "\r\n\r\n"
+NL = "\r\n"
 
-
-# create a subclass and override the handler methods
+# create an HTMLParser subclass and override the handler methods to find <a> and <h2> tags
 class MyHTMLParser(HTMLParser):
   def __init__(self):
     HTMLParser.__init__(self)
+    # initialize the readData variable to false so we don't read the data of all tags
     self.readData = False
 
   def handle_starttag(self, tag, attrs):
     global pages_to_visit, pages_visited, found_headers
+    # if we encounter an <a> tag, add its href to the work queue
     if tag == 'a':
+      # this is a series of safe accesses to the attrs list seeing if href exists
       newkeys = [i[0] for i in attrs]
       try:
         hrefIndex = newkeys.index('href')
@@ -33,10 +38,14 @@ class MyHTMLParser(HTMLParser):
           try:
             pages_visited.index(i)
           except:
+            # if href exists and its path is not in our list of visited paths,
+            # add it to our work queue if it's a path on fring.ccs.neu.edu
             if re.match(r"(/fakebook.*/)", i):
               pages_to_visit.append(i)
-      except Error as E:
+      except:
         pass
+    # if we encounter an <h2> tag with the 'secret_flag' class,
+    # set self.readData to true so that we extract the flag
     elif tag == 'h2':
       newkeys = [i[0] for i in attrs]
       try:
@@ -50,34 +59,36 @@ class MyHTMLParser(HTMLParser):
 
   def handle_data(self, data):
     global found_headers
+    # if self.readData is true, extract the flag and add it to our list
+    # if we haven't found this flag already
     if self.readData:
       self.readData = False
-      print "FOUND READ DATA IS TRUE, PRINTING DATA"
-      print "FOUND : " + str(data)
       flag_regex = r"FLAG: (.*)"
       matches = re.search(flag_regex, data)
-      found_headers.append(matches.group(1))
+      header = matches.group(1)
+      if header not in found_headers:
+        found_headers.append(header)
 
 
-# instantiate the parser and fed it some HTML
+# instantiate the parser to be used globally
 parser = MyHTMLParser()
 
-socket.setdefaulttimeout = 10
-os.environ['no_proxy'] = '127.0.0.1,localhost'
-linkRegex = re.compile('<a\s*href=[\'|"](.*?)[\'"].*?>')
-CRLF = "\r\n\r\n"
-NL = "\r\n"
-CSRF = ""
-
-
+# main method, crawls FakeBook looking for secret flags
 def spider():
   global ROOT, PORT, pages_to_visit, pages_visited, found_headers
+
+  # open the initial socket connection
   s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
   s.connect((ROOT, PORT))
 
+  # logon to the site
   logon("http://fring.ccs.neu.edu/accounts/login/?next=/fakebook/", s)
+
+  # maintain a counter to close and reopen the connection to prevent socket errors
   count = 1
+  # loop as long as we have pages to visit and haven't found all of the flags
   while pages_to_visit and len(found_headers) < 5:
+    # close and reopen the connection every 3 requests
     if count % 3 == 0:
       try:
         s.shutdown(1)
@@ -86,47 +97,69 @@ def spider():
         s.connect((ROOT, PORT))
       except:
         continue
-    print "RUNNING: " + str(count)
     count += 1
+    # crawl the current page
     crawl('http://fring.ccs.neu.edu' + pages_to_visit[0], s)
 
-  print str(found_headers)
+  # print the flags after the loop completes
+  for h in found_headers:
+    print h
 
+  # close the connection
   s.shutdown(1)
   s.close()
 
 
+# convenience method for constructing HTTP request strings
 def request(type, url, contentType=None, contentLength=None, cookies={}, data={}):
+  # start by inserting the request type and desired path
   r = "%s %s HTTP/1.1\r\nhost: fring.ccs.neu.edu\r\n" % (type, url)
+  # if we recieved a contentType, add the header to our request
   if contentType:
     r = r + "Content-Type: " + contentType + "\r\n"
+  # if we received a contentLength, add the header to our request
   if contentLength:
     r = r + "Content-Length: " + str(contentLength) + "\r\n"
+  # if we received cookies, add the header to our request
   if not len(cookies.keys()) == 0:
     r = r + "Cookie: "
     for key in cookies.keys():
       r = r + key + "=" + cookies[key] + "; "
     r = r[:-2] + "\r\n"
+  # if we received data to put in the body, add it to our request
   if data:
     r = r + "\r\n" + data
+  # add a CRLF at the end
   r = r + "\r\n\r\n"
   return r
 
 
+# log on to the site
 def logon(url, s):
   global ROOT, CSRF
+
+  # parse the url to get the path
   url = urlparse.urlparse(url)
   path = url.path
+
+  # build a GET request using the path, send it, and receive the response
   req = request("GET", path)
   s.send(req)
   data = s.recv(1000000)
+
+  # set the cookie values based on the response
   get_cookies(data)
   cookies = {'csrftoken': CSRF, 'sessionid': str(session)}
+
+  # set the form data body of our login POST request
   login_data = 'csrfmiddlewaretoken=' + CSRF + '&next=%2Ffakebook%2F&username=1732187&password=8ZUTZ78U'
+  # pass all of the arguments to request to build our POST request, send it, receive the response, and set the cookies
   req = request("POST", path, 'application/x-www-form-urlencoded', str(len(login_data)), cookies, login_data)
   s.send(req)
   data = s.recv(1000000)
   get_cookies(data)
+
+  # delegate the response to the handler
   return handle(data, s, path)
 
 
@@ -190,7 +223,6 @@ def handle_ok(data, s, path):
     pages_to_visit.remove(path)
   except:
     pass
-  print "FEEDING FROM: " + str(path)
   parser.feed(data)
 
 
