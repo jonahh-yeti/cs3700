@@ -105,14 +105,13 @@ def spider():
         continue
     count += 1
     # crawl the current page
-    print str(count) + ': ' + 'http://fring.ccs.neu.edu' + pages_to_visit[0]
     while '<html>' in pages_to_visit[0]:
       del pages_to_visit[0]
     crawl('http://fring.ccs.neu.edu' + pages_to_visit[0], s)
 
   # print the flags after the loop completes
   for h in found_headers:
-    print 'FLAG: ' + h
+    print h
 
   # close the connection
   s.shutdown(1)
