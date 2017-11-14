@@ -105,7 +105,7 @@ def spider():
         continue
     count += 1
     # crawl the current page
-    print 'CRAWLIN'
+    print 'CRAWLIN ' + str(count)
     crawl('http://fring.ccs.neu.edu' + pages_to_visit[0], s)
 
   # print the flags after the loop completes
